@@ -7,6 +7,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -17,6 +18,7 @@ import java.util.List;
 /**
  * 解析 opaque token 并写入 SecurityContext。
  */
+@RequiredArgsConstructor
 public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String TOKEN_ATTRIBUTE = "keel.auth.token";
@@ -24,13 +26,6 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     private final TokenResolver tokenResolver;
     private final TokenService tokenService;
     private final TokenUserProvider tokenUserProvider;
-
-    public TokenAuthenticationFilter(TokenResolver tokenResolver, TokenService tokenService,
-                                     TokenUserProvider tokenUserProvider) {
-        this.tokenResolver = tokenResolver;
-        this.tokenService = tokenService;
-        this.tokenUserProvider = tokenUserProvider;
-    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,

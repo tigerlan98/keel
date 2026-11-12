@@ -15,6 +15,7 @@ import io.github.keel.iam.infrastructure.persistence.po.IamResourcePO;
 import io.github.keel.iam.infrastructure.persistence.po.IamRolePO;
 import io.github.keel.iam.infrastructure.persistence.po.IamRoleResourcePO;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserRolePO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -27,6 +28,7 @@ import java.util.Set;
  * 角色查询、维护与资源授权。
  */
 @Service
+@RequiredArgsConstructor
 public class RoleApplicationService {
 
     private static final String SUPER_ADMIN_CODE = "SUPER_ADMIN";
@@ -38,18 +40,6 @@ public class RoleApplicationService {
     private final IamUserRoleMapper userRoleMapper;
     private final IamRoleResourceMapper roleResourceMapper;
     private final AuthorizationCacheEvictor cacheEvictor;
-
-    public RoleApplicationService(IamRoleMapper roleMapper,
-                                  IamResourceMapper resourceMapper,
-                                  IamUserRoleMapper userRoleMapper,
-                                  IamRoleResourceMapper roleResourceMapper,
-                                  AuthorizationCacheEvictor cacheEvictor) {
-        this.roleMapper = roleMapper;
-        this.resourceMapper = resourceMapper;
-        this.userRoleMapper = userRoleMapper;
-        this.roleResourceMapper = roleResourceMapper;
-        this.cacheEvictor = cacheEvictor;
-    }
 
     public PageResult<RoleSummaryView> page(RolePageCommand command) {
         int pageNumber = command.page() == null ? DEFAULT_PAGE : command.page();

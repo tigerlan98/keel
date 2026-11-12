@@ -7,6 +7,7 @@ import io.github.keel.iam.infrastructure.persistence.mapper.IamUserRoleMapper;
 import io.github.keel.iam.infrastructure.persistence.po.IamRolePO;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserPO;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserRolePO;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
  * 首次启动创建初始管理员，绑定 SUPER_ADMIN，并要求首次登录改密。
  */
 @Component
+@RequiredArgsConstructor
 public class InitialAdminInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(InitialAdminInitializer.class);
@@ -28,22 +30,12 @@ public class InitialAdminInitializer implements ApplicationRunner {
     private final IamRoleMapper roleMapper;
     private final IamUserRoleMapper userRoleMapper;
     private final PasswordEncoder passwordEncoder;
-    private final String username;
-    private final String password;
 
-    public InitialAdminInitializer(IamUserMapper userMapper,
-                                   IamRoleMapper roleMapper,
-                                   IamUserRoleMapper userRoleMapper,
-                                   PasswordEncoder passwordEncoder,
-                                   @Value("${keel.admin.username:}") String username,
-                                   @Value("${keel.admin.password:}") String password) {
-        this.userMapper = userMapper;
-        this.roleMapper = roleMapper;
-        this.userRoleMapper = userRoleMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.username = username;
-        this.password = password;
-    }
+    @Value("${keel.admin.username:}")
+    private String username;
+
+    @Value("${keel.admin.password:}")
+    private String password;
 
     @Override
     public void run(ApplicationArguments args) {

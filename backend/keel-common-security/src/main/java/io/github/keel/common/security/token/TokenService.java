@@ -1,6 +1,7 @@
 package io.github.keel.common.security.token;
 
 import io.github.keel.common.security.config.SecurityTokenProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import java.util.Optional;
  * 不透明 token 的签发、校验与吊销。Redis 只保存 SHA-256 哈希。
  */
 @Service
+@RequiredArgsConstructor
 public class TokenService {
 
     private static final String TOKEN_KEY_PREFIX = "auth:token:";
@@ -27,11 +29,6 @@ public class TokenService {
 
     private final StringRedisTemplate redis;
     private final SecurityTokenProperties properties;
-
-    public TokenService(StringRedisTemplate redis, SecurityTokenProperties properties) {
-        this.redis = redis;
-        this.properties = properties;
-    }
 
     public IssuedToken issue(long userId, String loginType, String device, String ip, String userAgent) {
         boolean web = LOGIN_TYPE_ADMIN.equals(loginType);

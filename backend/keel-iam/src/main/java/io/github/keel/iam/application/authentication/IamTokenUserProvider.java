@@ -4,6 +4,7 @@ import io.github.keel.common.security.auth.AuthenticatedUser;
 import io.github.keel.common.security.auth.TokenUserProvider;
 import io.github.keel.iam.infrastructure.persistence.mapper.IamUserMapper;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserPO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -12,15 +13,12 @@ import java.util.Optional;
  * 认证过滤器加载 IAM 用户的端口实现。
  */
 @Component
+@RequiredArgsConstructor
 public class IamTokenUserProvider implements TokenUserProvider {
 
     private static final String STATUS_ENABLED = "ENABLED";
 
     private final IamUserMapper userMapper;
-
-    public IamTokenUserProvider(IamUserMapper userMapper) {
-        this.userMapper = userMapper;
-    }
 
     @Override
     public Optional<AuthenticatedUser> findActiveUser(long userId) {

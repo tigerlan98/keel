@@ -3,6 +3,7 @@ package io.github.keel.audit.application.log;
 import io.github.keel.audit.infrastructure.persistence.mapper.LoginLogMapper;
 import io.github.keel.audit.infrastructure.persistence.po.LoginLogPO;
 import io.github.keel.common.core.event.LoginLogEvent;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -13,16 +14,13 @@ import org.springframework.stereotype.Component;
  * 登录日志同步消费。审计写入失败不阻断登录流程。
  */
 @Component
+@RequiredArgsConstructor
 public class LoginLogListener {
 
     private static final Logger log = LoggerFactory.getLogger(LoginLogListener.class);
     private static final String REQUEST_ID_MDC_KEY = "requestId";
 
     private final LoginLogMapper loginLogMapper;
-
-    public LoginLogListener(LoginLogMapper loginLogMapper) {
-        this.loginLogMapper = loginLogMapper;
-    }
 
     @EventListener
     public void onLoginLog(LoginLogEvent event) {

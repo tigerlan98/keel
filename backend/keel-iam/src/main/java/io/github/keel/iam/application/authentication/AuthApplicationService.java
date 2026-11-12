@@ -13,6 +13,7 @@ import io.github.keel.iam.application.authorization.AuthorizationCacheEvictor;
 import io.github.keel.iam.application.authorization.AuthorizationQueryService;
 import io.github.keel.iam.infrastructure.persistence.mapper.IamUserMapper;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserPO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.Optional;
  * 登录、当前用户、改密与登出用例。
  */
 @Service
+@RequiredArgsConstructor
 public class AuthApplicationService {
 
     private static final String STATUS_ENABLED = "ENABLED";
@@ -33,20 +35,6 @@ public class AuthApplicationService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final ApplicationEventPublisher eventPublisher;
-
-    public AuthApplicationService(IamUserMapper userMapper,
-                                  AuthorizationQueryService authorizationQueryService,
-                                  AuthorizationCacheEvictor authorizationCacheEvictor,
-                                  PasswordEncoder passwordEncoder,
-                                  TokenService tokenService,
-                                  ApplicationEventPublisher eventPublisher) {
-        this.userMapper = userMapper;
-        this.authorizationQueryService = authorizationQueryService;
-        this.authorizationCacheEvictor = authorizationCacheEvictor;
-        this.passwordEncoder = passwordEncoder;
-        this.tokenService = tokenService;
-        this.eventPublisher = eventPublisher;
-    }
 
     public AuthSession login(LoginCommand command) {
         IamUserPO user = userMapper.selectOne(Wrappers.<IamUserPO>lambdaQuery()

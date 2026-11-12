@@ -6,6 +6,7 @@ import io.github.keel.common.core.exception.BusinessException;
 import io.github.keel.iam.application.IamErrorCode;
 import io.github.keel.iam.infrastructure.persistence.mapper.IamResourceMapper;
 import io.github.keel.iam.infrastructure.persistence.po.IamResourcePO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.util.Map;
  * 资源树查询与展示属性维护。资源新增/删除仅由 Flyway 迁移执行。
  */
 @Service
+@RequiredArgsConstructor
 public class ResourceApplicationService {
 
     private static final String STATUS_ENABLED = "ENABLED";
@@ -27,11 +29,6 @@ public class ResourceApplicationService {
 
     private final IamResourceMapper resourceMapper;
     private final AuthorizationCacheEvictor cacheEvictor;
-
-    public ResourceApplicationService(IamResourceMapper resourceMapper, AuthorizationCacheEvictor cacheEvictor) {
-        this.resourceMapper = resourceMapper;
-        this.cacheEvictor = cacheEvictor;
-    }
 
     public List<ResourceNodeView> tree(ResourceStatus status, ResourceType type) {
         List<IamResourcePO> resources = resourceMapper.selectList(Wrappers.<IamResourcePO>lambdaQuery()

@@ -8,6 +8,7 @@ import io.github.keel.common.core.exception.BusinessException;
 import io.github.keel.common.core.result.PageResult;
 import io.github.keel.iam.infrastructure.persistence.mapper.IamUserMapper;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserPO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -17,16 +18,13 @@ import java.util.List;
  * 用户分页查询。
  */
 @Service
+@RequiredArgsConstructor
 public class UserQueryApplicationService {
 
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_SIZE = 20;
 
     private final IamUserMapper userMapper;
-
-    public UserQueryApplicationService(IamUserMapper userMapper) {
-        this.userMapper = userMapper;
-    }
 
     public PageResult<UserSummaryView> page(UserPageCommand command) {
         int pageNumber = command.page() == null ? DEFAULT_PAGE : command.page();

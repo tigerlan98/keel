@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -45,19 +46,12 @@ import java.util.List;
 @Tag(name = "Auth", description = "管理端认证与会话")
 @RestController
 @RequestMapping("/api/v1/admin/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthApplicationService authApplicationService;
     private final TokenResolver tokenResolver;
     private final SecurityTokenProperties securityTokenProperties;
-
-    public AuthController(AuthApplicationService authApplicationService,
-                          TokenResolver tokenResolver,
-                          SecurityTokenProperties securityTokenProperties) {
-        this.authApplicationService = authApplicationService;
-        this.tokenResolver = tokenResolver;
-        this.securityTokenProperties = securityTokenProperties;
-    }
 
     @Operation(operationId = "login", summary = "登录",
             description = "Web 模式写入 HttpOnly Cookie；App / MINI 模式在响应体中返回 token。同一设备再次登录会使旧 token 失效。")

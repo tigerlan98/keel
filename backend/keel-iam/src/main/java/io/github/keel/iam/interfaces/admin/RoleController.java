@@ -23,6 +23,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,13 +46,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/admin/iam/roles")
 @Validated
+@RequiredArgsConstructor
 public class RoleController {
 
     private final RoleApplicationService roleApplicationService;
-
-    public RoleController(RoleApplicationService roleApplicationService) {
-        this.roleApplicationService = roleApplicationService;
-    }
 
     @Operation(operationId = "listRoles", summary = "角色分页查询", description = "支持名称/编码前缀与状态筛选。")
     @GetMapping

@@ -1,6 +1,7 @@
 package io.github.keel.common.security.web;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -12,15 +13,12 @@ import java.nio.charset.StandardCharsets;
  * App / Mini 客户端登录不经过浏览器 Cookie，因此跳过 CSRF；Web 登录仍强制 CSRF。
  */
 @Component
+@RequiredArgsConstructor
 public class AppDeviceLoginRequestMatcher implements RequestMatcher {
 
     private static final String LOGIN_PATH = "/api/v1/admin/auth/login";
 
     private final ObjectMapper objectMapper;
-
-    public AppDeviceLoginRequestMatcher(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
 
     @Override
     public boolean matches(HttpServletRequest request) {

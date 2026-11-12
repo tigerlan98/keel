@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,13 +34,10 @@ import java.util.List;
 @Tag(name = "Resource", description = "管理端资源树与展示属性")
 @RestController
 @RequestMapping("/api/v1/admin/iam/resources")
+@RequiredArgsConstructor
 public class ResourceController {
 
     private final ResourceApplicationService resourceApplicationService;
-
-    public ResourceController(ResourceApplicationService resourceApplicationService) {
-        this.resourceApplicationService = resourceApplicationService;
-    }
 
     @Operation(operationId = "getResourceTree", summary = "资源树", description = "资源树是有界集合，不分页；可按状态与类型筛选。")
     @GetMapping("/tree")

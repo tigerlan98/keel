@@ -1,5 +1,6 @@
 package io.github.keel.iam.infrastructure.cache;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -19,16 +20,13 @@ import java.util.Set;
  * <p>权限码不含逗号，直接以逗号分隔存储空集合为 {@code ""}。</p>
  */
 @Component
+@RequiredArgsConstructor
 public class PermissionCache {
 
     private static final String KEY_PREFIX = "iam:perm:";
     private static final Duration TTL = Duration.ofMinutes(30);
 
     private final StringRedisTemplate redis;
-
-    public PermissionCache(StringRedisTemplate redis) {
-        this.redis = redis;
-    }
 
     public Optional<Set<String>> get(long userId) {
         String value = redis.opsForValue().get(key(userId));

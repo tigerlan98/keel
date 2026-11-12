@@ -3,6 +3,7 @@ package io.github.keel.iam.application.authorization;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.github.keel.iam.infrastructure.persistence.mapper.IamResourceMapper;
 import io.github.keel.iam.infrastructure.persistence.po.IamResourcePO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.Set;
  * 当前用户的权限码与菜单树查询。
  */
 @Service
+@RequiredArgsConstructor
 public class AuthorizationQueryService {
 
     private static final String STATUS_ENABLED = "ENABLED";
@@ -26,11 +28,6 @@ public class AuthorizationQueryService {
 
     private final IamResourceMapper resourceMapper;
     private final IamPermissionProvider permissionProvider;
-
-    public AuthorizationQueryService(IamResourceMapper resourceMapper, IamPermissionProvider permissionProvider) {
-        this.resourceMapper = resourceMapper;
-        this.permissionProvider = permissionProvider;
-    }
 
     /**
      * 超级管理员的权限码集合为空，鉴权时直接绕过；普通用户返回授权码。

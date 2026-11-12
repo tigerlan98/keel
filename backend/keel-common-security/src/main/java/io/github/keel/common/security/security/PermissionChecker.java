@@ -2,6 +2,7 @@ package io.github.keel.common.security.security;
 
 import io.github.keel.common.security.auth.AuthenticatedUser;
 import io.github.keel.common.security.auth.PermissionProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -12,13 +13,10 @@ import org.springframework.stereotype.Component;
  * <p>{@code SUPER_ADMIN} 直接放行，其余用户按权限码集合判断。</p>
  */
 @Component("perm")
+@RequiredArgsConstructor
 public class PermissionChecker {
 
     private final PermissionProvider permissionProvider;
-
-    public PermissionChecker(PermissionProvider permissionProvider) {
-        this.permissionProvider = permissionProvider;
-    }
 
     public boolean has(String permission) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

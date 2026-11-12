@@ -2,6 +2,7 @@ package io.github.keel.common.persistence.config;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import io.github.keel.common.core.auth.CurrentUserProvider;
+import lombok.RequiredArgsConstructor;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
@@ -12,15 +13,12 @@ import java.time.LocalDateTime;
  * 统一填充审计字段，操作人来自当前登录用户；未登录时记为系统用户 0。
  */
 @Component
+@RequiredArgsConstructor
 public class AuditMetaObjectHandler implements MetaObjectHandler {
 
     private static final Long SYSTEM_USER_ID = 0L;
 
     private final ObjectProvider<CurrentUserProvider> currentUserProvider;
-
-    public AuditMetaObjectHandler(ObjectProvider<CurrentUserProvider> currentUserProvider) {
-        this.currentUserProvider = currentUserProvider;
-    }
 
     @Override
     public void insertFill(MetaObject metaObject) {

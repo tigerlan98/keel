@@ -3,6 +3,7 @@ package io.github.keel.common.security.token;
 import io.github.keel.common.security.config.SecurityTokenProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
@@ -12,13 +13,10 @@ import java.util.Optional;
  * 按 Authorization 头 → Cookie 的顺序解析 token。
  */
 @Component
+@RequiredArgsConstructor
 public class TokenResolver {
 
     private final SecurityTokenProperties properties;
-
-    public TokenResolver(SecurityTokenProperties properties) {
-        this.properties = properties;
-    }
 
     public Optional<String> resolve(HttpServletRequest request) {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);

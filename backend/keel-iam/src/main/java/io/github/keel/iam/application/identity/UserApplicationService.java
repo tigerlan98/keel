@@ -14,6 +14,7 @@ import io.github.keel.iam.infrastructure.persistence.mapper.IamUserRoleMapper;
 import io.github.keel.iam.infrastructure.persistence.po.IamRolePO;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserPO;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserRolePO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
  * 用户维护：创建、资料更新、启停、重置密码、角色分配与强制下线。
  */
 @Service
+@RequiredArgsConstructor
 public class UserApplicationService {
 
     private static final String STATUS_ENABLED = "ENABLED";
@@ -40,20 +42,6 @@ public class UserApplicationService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final AuthorizationCacheEvictor cacheEvictor;
-
-    public UserApplicationService(IamUserMapper userMapper,
-                                  IamRoleMapper roleMapper,
-                                  IamUserRoleMapper userRoleMapper,
-                                  PasswordEncoder passwordEncoder,
-                                  TokenService tokenService,
-                                  AuthorizationCacheEvictor cacheEvictor) {
-        this.userMapper = userMapper;
-        this.roleMapper = roleMapper;
-        this.userRoleMapper = userRoleMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.tokenService = tokenService;
-        this.cacheEvictor = cacheEvictor;
-    }
 
     public UserDetailView detail(long id) {
         IamUserPO user = requireUser(id);

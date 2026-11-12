@@ -57,6 +57,7 @@
 5. Controller 只负责接收、校验、调用应用服务、返回 VO，禁止编写业务逻辑；事务边界放在 application 层。
 6. 跨模块协作只通过 `common` 中的契约，禁止依赖其他业务模块的实现；`common` 中不得编写业务逻辑。
 7. 禁止使用 MyBatis-Plus 的 `IService` / `ServiceImpl`，只使用 `BaseMapper` 与显式 SQL。
+8. 生产代码中 Spring 组件的依赖注入统一使用 Lombok `@RequiredArgsConstructor` 配合 `private final` 字段，禁止手写仅用于依赖注入的构造器，禁止使用 `@Autowired` / `@Resource` 字段注入；非依赖注入的配置值（如 `@Value`）可保留字段注入。测试类不受此限制，按 Spring Boot 测试惯例使用 `@Autowired`。
 
 ### 参数校验与持久化
 

@@ -30,6 +30,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -53,16 +54,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/admin/iam/users")
 @Validated
+@RequiredArgsConstructor
 public class UserController {
 
     private final UserQueryApplicationService userQueryApplicationService;
     private final UserApplicationService userApplicationService;
-
-    public UserController(UserQueryApplicationService userQueryApplicationService,
-                          UserApplicationService userApplicationService) {
-        this.userQueryApplicationService = userQueryApplicationService;
-        this.userApplicationService = userApplicationService;
-    }
 
     @Operation(operationId = "listUsers", summary = "用户分页查询", description = "支持用户名前缀、状态筛选与白名单排序。")
     @GetMapping
