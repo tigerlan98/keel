@@ -107,6 +107,34 @@ public class TokenService {
         return Optional.of(new TokenSession(userId, loginType, device, tokenHash));
     }
 
+    /**
+     * 吊销用户在全部设备与登录类型下的 token。
+     */
+    public void revokeAll(long userId) {
+        for (String loginType : new String[]{LOGIN_TYPE_ADMIN, "APP", "MINI"}) {
+            revokeIndex(loginType, userId);
+        }
+    }
+
+    /**
+     * 吊销用户在指定设备上的 token；无会话时静默返回。
+     */
+    public void revokeDevice(long userId, String loginType, String device) {
+        String indexKey = indexKey(loginType, userId);
+        Object tokenHash = redis.opsForHash().get(indexKey, device);
+        if (tokenHash != null) {
+            redis.delete(tokenKey(tokenHash.toString()));
+            redis.opsForHash().delete(indexKey, device);
+        }
+    }
+
+    private void revokeIndex(String loginType, long userId) {
+        String indexKey = indexKey(loginType, userId);
+        Map<Object, Object> entries = redis.opsForHash().entries(indexKey);
+        entries.values().forEach(tokenHash -> redis.delete(tokenKey(tokenHash.toString())));
+        redis.delete(indexKey);
+    }
+
     public void revoke(String rawToken) {
         if (rawToken == null || rawToken.isBlank()) {
             return;

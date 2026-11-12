@@ -1,5 +1,7 @@
 package io.github.keel.iam.application.authentication;
 
+import io.github.keel.iam.application.authorization.MenuView;
+
 import java.time.Duration;
 import java.util.List;
 

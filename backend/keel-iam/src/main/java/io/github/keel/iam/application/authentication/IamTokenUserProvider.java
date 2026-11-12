@@ -30,6 +30,7 @@ public class IamTokenUserProvider implements TokenUserProvider {
         }
         boolean superAdmin = userMapper.countSuperAdminRole(userId) > 0;
         return Optional.of(new AuthenticatedUser(
-                user.getId(), user.getUsername(), user.getNickname(), superAdmin));
+                user.getId(), user.getUsername(), user.getNickname(), superAdmin,
+                Boolean.TRUE.equals(user.getMustChangePassword())));
     }
 }

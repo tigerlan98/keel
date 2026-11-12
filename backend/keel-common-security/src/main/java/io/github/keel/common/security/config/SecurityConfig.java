@@ -4,17 +4,18 @@ import io.github.keel.common.core.error.CommonErrorCode;
 import io.github.keel.common.core.error.ErrorCode;
 import io.github.keel.common.security.auth.TokenUserProvider;
 import io.github.keel.common.security.error.AuthErrorCode;
+import io.github.keel.common.security.security.PasswordChangeRequiredFilter;
 import io.github.keel.common.security.security.TokenAuthenticationFilter;
 import io.github.keel.common.security.token.TokenResolver;
 import io.github.keel.common.security.token.TokenService;
 import io.github.keel.common.security.web.AppDeviceLoginRequestMatcher;
+import io.github.keel.common.security.web.SecurityErrorWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,7 +30,6 @@ import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 /**
  * 无状态安全配置：opaque token、CSRF 双模式、401/403 统一响应。
@@ -88,7 +88,8 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .addFilterBefore(new TokenAuthenticationFilter(tokenResolver, tokenService, tokenUserProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new PasswordChangeRequiredFilter(), TokenAuthenticationFilter.class);
 
         return http.build();
     }
@@ -99,10 +100,6 @@ public class SecurityConfig {
     }
 
     private static void writeError(HttpServletResponse response, ErrorCode errorCode) throws IOException {
-        response.setStatus(errorCode.httpStatus());
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write("{\"code\":\"" + errorCode.code()
-                + "\",\"message\":\"" + errorCode.message() + "\"}");
+        SecurityErrorWriter.write(response, errorCode);
     }
 }

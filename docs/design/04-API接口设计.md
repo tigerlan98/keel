@@ -342,6 +342,8 @@
 
 **响应**：201 + `UserDetail`
 
+**说明**：创建成功后 `mustChangePassword = true`，用户首次登录必须修改密码。
+
 **错误**：`IAM_USERNAME_EXISTS` 409、`IAM_INVALID_ROLE_IDS` 400。
 
 ### 5.4 `PUT /api/v1/admin/iam/users/{id}`

@@ -39,6 +39,8 @@
         <!-- 第三方组件版本；与设计文档保持一致 -->
         <mybatis-plus.version>3.5.18.1</mybatis-plus.version>
         <springdoc.version>3.2.0</springdoc.version>
+        <!-- 与 springdoc-openapi 3.2.0 传递依赖保持一致 -->
+        <swagger-annotations.version>2.2.55</swagger-annotations.version>
         <archunit.version>1.5.1</archunit.version>
         <lombok.version>1.18.48</lombok.version>
         <testcontainers.version>2.0.5</testcontainers.version>
@@ -115,6 +117,11 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations-jakarta</artifactId>
+                <version>${swagger-annotations.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>

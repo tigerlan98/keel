@@ -6,6 +6,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.List;
+
 /**
  * IAM 用户 Mapper，仅提供 MyBatis-Plus 基础 CRUD。
  */
@@ -21,4 +23,7 @@ public interface IamUserMapper extends BaseMapper<IamUserPO> {
               AND r.status = 'ENABLED'
             """)
     int countSuperAdminRole(@Param("userId") Long userId);
+
+    @Select("SELECT DISTINCT user_id FROM iam_user_role WHERE role_id = #{roleId}")
+    List<Long> selectUserIdsByRoleId(@Param("roleId") Long roleId);
 }

@@ -143,10 +143,13 @@ Phase 1A 已完成：
 - `POST /api/v1/admin/auth/login`
 - `POST /api/v1/admin/auth/logout`
 - `GET /api/v1/admin/auth/me`
+- `POST /api/v1/admin/auth/change-password`
 
-管理接口：
+管理接口（Phase 1B / 2）：
 
-- `GET /api/v1/admin/iam/users`：用户分页，支持 `page`、`size`、`sort`、`username` 前缀、`status` 筛选
+- 用户：分页、详情、创建、编辑、启停、重置密码、查询/替换角色、按用户或设备强制下线
+- 角色：分页、详情、创建、编辑、删除、查询/替换资源授权
+- 资源：树、详情、更新展示属性、启停；资源的创建/删除仅由 Flyway 迁移维护
 
 登录行为同步写入 `aud_login_log`，记录 `LOGIN`、`LOGOUT`、`LOGIN_FAILED`。
 
@@ -158,8 +161,29 @@ Phase 1B 前后端闭环已完成：
 - 未登录或会话失效时返回 401，前端清理登录态并跳转登录页。
 - 用户列表页面支持用户名前缀、状态筛选、排序与分页。
 - 登录、登出、登录失败同步写入 `aud_login_log`。
+- OpenAPI 快照（`frontend/admin/openapi/openapi.json`）由后端导出，Admin 类型由快照生成。
+- Playwright 覆盖登录、登出、登录失败、401 跳转、用户列表筛选/分页/错误重试。
 
-剩余：
+Phase 2 RBAC 已完成：
 
-- OpenAPI 快照导出与 TypeScript 类型生成。
-- Playwright 登录、401、用户列表关键路径。
+- 权限码与菜单树按用户查询并缓存于 Redis（`iam:perm:{userId}`，TTL 30 分钟）；角色、资源、用户-角色与用户状态变更后按影响范围失效。
+- `PermissionChecker` 先判断 `SUPER_ADMIN`，再校验权限码；普通管理员只看到被授权菜单与按钮。
+- 角色保护：`SUPER_ADMIN` 不可删除/禁用/改 code；被用户引用时禁止删除。
+- 资源保护：停用存在启用子资源的目录/菜单返回 409；父级非法或成环返回 400；`type/code/path/component` 不可修改。
+- 用户禁用、重置密码与强制下线会立即吊销 token；`mustChangePassword` 由服务端强制拦截，仅允许改密、登出、`/me` 与 CSRF。
+- Admin 侧边栏由后端菜单驱动，登录落在第一个有权限菜单；新增角色、资源、用户页面与 `v-permission` 按钮权限；403 只提示不退出登录。
+- Playwright 覆盖菜单可见性、403、角色创建、资源停用冲突与强制改密，共 14 个用例。
+
+契约与 E2E 命令：
+
+```powershell
+# 后端导出 OpenAPI 快照到 frontend/admin/openapi/openapi.json（需要 Docker）
+powershell -File scripts/openapi/export-openapi.ps1
+
+cd frontend/admin
+pnpm openapi:generate   # 重新生成 src/api/generated.ts
+pnpm openapi:check      # 校验生成物与已提交内容一致
+pnpm test:e2e           # Playwright（自动启动 Vite，接口由用例 mock）
+```
+
+后端 OpenAPI 包含 `cookieAuth` / `bearerAuth` 安全方案、端点摘要、参数说明与响应示例；DTO 中必填字段通过 `@Schema(requiredMode = REQUIRED)` 写入契约。

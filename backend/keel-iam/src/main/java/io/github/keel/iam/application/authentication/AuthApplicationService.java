@@ -9,24 +9,18 @@ import io.github.keel.common.security.error.AuthErrorCode;
 import io.github.keel.common.security.token.IssuedToken;
 import io.github.keel.common.security.token.TokenService;
 import io.github.keel.common.security.token.TokenSession;
-import io.github.keel.iam.infrastructure.persistence.mapper.IamResourceMapper;
+import io.github.keel.iam.application.authorization.AuthorizationCacheEvictor;
+import io.github.keel.iam.application.authorization.AuthorizationQueryService;
 import io.github.keel.iam.infrastructure.persistence.mapper.IamUserMapper;
-import io.github.keel.iam.infrastructure.persistence.po.IamResourcePO;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserPO;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
- * 登录、当前用户与登出用例。
- *
- * <p>Phase 1A 只加载超级管理员菜单；普通管理员权限码与菜单在 RBAC 阶段接入。</p>
+ * 登录、当前用户、改密与登出用例。
  */
 @Service
 public class AuthApplicationService {
@@ -34,18 +28,21 @@ public class AuthApplicationService {
     private static final String STATUS_ENABLED = "ENABLED";
 
     private final IamUserMapper userMapper;
-    private final IamResourceMapper resourceMapper;
+    private final AuthorizationQueryService authorizationQueryService;
+    private final AuthorizationCacheEvictor authorizationCacheEvictor;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final ApplicationEventPublisher eventPublisher;
 
     public AuthApplicationService(IamUserMapper userMapper,
-                                  IamResourceMapper resourceMapper,
+                                  AuthorizationQueryService authorizationQueryService,
+                                  AuthorizationCacheEvictor authorizationCacheEvictor,
                                   PasswordEncoder passwordEncoder,
                                   TokenService tokenService,
                                   ApplicationEventPublisher eventPublisher) {
         this.userMapper = userMapper;
-        this.resourceMapper = resourceMapper;
+        this.authorizationQueryService = authorizationQueryService;
+        this.authorizationCacheEvictor = authorizationCacheEvictor;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
         this.eventPublisher = eventPublisher;
@@ -81,8 +78,8 @@ public class AuthApplicationService {
         return new AuthSession(
                 toUserView(user),
                 superAdmin,
-                List.of(),
-                superAdmin ? loadEnabledMenus() : List.of(),
+                authorizationQueryService.permissions(user.getId(), superAdmin),
+                authorizationQueryService.menus(user.getId(), superAdmin),
                 Boolean.TRUE.equals(user.getMustChangePassword()),
                 issuedToken.token(),
                 issuedToken.idleTimeout(),
@@ -98,12 +95,32 @@ public class AuthApplicationService {
         return new AuthSession(
                 toUserView(user),
                 principal.superAdmin(),
-                List.of(),
-                principal.superAdmin() ? loadEnabledMenus() : List.of(),
+                authorizationQueryService.permissions(user.getId(), principal.superAdmin()),
+                authorizationQueryService.menus(user.getId(), principal.superAdmin()),
                 Boolean.TRUE.equals(user.getMustChangePassword()),
                 null,
                 null,
                 null);
+    }
+
+    /**
+     * 修改自己的密码：校验旧密码，更新后吊销全部 token 并清理权限缓存。
+     */
+    public void changePassword(AuthenticatedUser principal, String oldPassword, String newPassword) {
+        IamUserPO user = userMapper.selectById(principal.id());
+        if (user == null || !STATUS_ENABLED.equals(user.getStatus())) {
+            throw new BusinessException(AuthErrorCode.AUTH_TOKEN_INVALID);
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            throw new BusinessException(AuthErrorCode.AUTH_OLD_PASSWORD_INVALID);
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        userMapper.updateById(user);
+
+        tokenService.revokeAll(user.getId());
+        authorizationCacheEvictor.evictUser(user.getId());
     }
 
     public void logout(String rawToken, AuthenticatedUser principal, String ip, String userAgent) {
@@ -133,42 +150,6 @@ public class AuthApplicationService {
                 command.userAgent(),
                 success,
                 failureReason));
-    }
-
-    private List<MenuView> loadEnabledMenus() {
-        List<IamResourcePO> resources = resourceMapper.selectList(Wrappers.<IamResourcePO>lambdaQuery()
-                .in(IamResourcePO::getType, "DIRECTORY", "MENU")
-                .eq(IamResourcePO::getStatus, STATUS_ENABLED)
-                .eq(IamResourcePO::getVisible, true)
-                .orderByAsc(IamResourcePO::getSort)
-                .orderByAsc(IamResourcePO::getId));
-
-        Map<Long, MenuView> nodes = new LinkedHashMap<>();
-        for (IamResourcePO resource : resources) {
-            nodes.put(resource.getId(), new MenuView(
-                    resource.getId(),
-                    resource.getParentId(),
-                    resource.getType(),
-                    resource.getCode(),
-                    resource.getName(),
-                    resource.getPath(),
-                    resource.getComponent(),
-                    resource.getIcon(),
-                    resource.getSort(),
-                    resource.getVisible(),
-                    new ArrayList<>()));
-        }
-
-        List<MenuView> roots = new ArrayList<>();
-        for (MenuView node : nodes.values()) {
-            MenuView parent = node.parentId() == null ? null : nodes.get(node.parentId());
-            if (parent == null) {
-                roots.add(node);
-            } else {
-                parent.children().add(node);
-            }
-        }
-        return roots;
     }
 
     private AuthUserView toUserView(IamUserPO user) {

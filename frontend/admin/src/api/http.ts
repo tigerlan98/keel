@@ -23,13 +23,24 @@ export class ApiError extends Error {
 
 type UnauthorizedHandler = () => void
 
+type ForbiddenHandler = (code: string, message: string) => void
+
 let unauthorizedHandler: UnauthorizedHandler | null = null
+
+let forbiddenHandler: ForbiddenHandler | null = null
 
 /**
  * 401 时由应用入口注册的回调统一清理登录态并跳转。
  */
 export function onUnauthorized(handler: UnauthorizedHandler): void {
   unauthorizedHandler = handler
+}
+
+/**
+ * 403 只提示，不退出登录；由应用入口统一处理提示与改密跳转。
+ */
+export function onForbidden(handler: ForbiddenHandler): void {
+  forbiddenHandler = handler
 }
 
 function readCookie(name: string): string | null {
@@ -76,6 +87,10 @@ http.interceptors.response.use(
     }
 
     const message = body?.message || (status ? `请求失败（${status}）` : '网络连接失败，请稍后重试')
+
+    if (status === 403) {
+      forbiddenHandler?.(body?.code || 'COMMON_FORBIDDEN', message)
+    }
     return Promise.reject(
       new ApiError(
         body?.code || 'COMMON_REQUEST_FAILED',

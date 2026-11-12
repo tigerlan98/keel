@@ -16,6 +16,15 @@ export async function fetchMe(): Promise<MeResponse> {
   return response.data.data
 }
 
+export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  const csrfToken = await fetchCsrfToken()
+  await http.post(
+    '/admin/auth/change-password',
+    { oldPassword, newPassword },
+    { headers: { 'X-XSRF-TOKEN': csrfToken } },
+  )
+}
+
 export async function logout(): Promise<void> {
   const csrfToken = await fetchCsrfToken()
   await http.post('/admin/auth/logout', null, {

@@ -1,12 +1,11 @@
-export interface FieldErrorItem {
-  field: string
-  message: string
-}
+import type { components } from './generated'
 
-export interface ValidationErrorData {
-  fieldErrors?: FieldErrorItem[]
-}
+type Schemas = components['schemas']
 
+/**
+ * 统一响应与分页包装为泛型契约；OpenAPI 无法表达泛型，故保留手写结构。
+ * 具体 DTO 字段一律来自 OpenAPI 快照（`generated.ts`），禁止手写。
+ */
 export interface ApiResponse<T> {
   code: string
   message: string
@@ -20,50 +19,29 @@ export interface PageResult<T> {
   size: number
 }
 
-export interface UserBrief {
-  id: number
-  username: string
-  nickname: string
+export interface FieldErrorItem {
+  field: string
+  message: string
 }
 
-export interface MenuNode {
-  id: number
-  parentId: number
-  type: string
-  code: string
-  name: string
-  path: string | null
-  component: string | null
-  icon: string | null
-  sort: number
-  visible: boolean
-  children: MenuNode[]
+export interface ValidationErrorData {
+  fieldErrors?: FieldErrorItem[]
 }
 
-export interface LoginResponse {
-  user: UserBrief
-  superAdmin: boolean
-  permissions: string[]
-  menus: MenuNode[]
-  mustChangePassword: boolean
-  token?: string | null
-}
+export type UserBrief = Schemas['UserBrief']
+export type MenuNode = Schemas['MenuNode']
+export type LoginResponse = Schemas['LoginResponse']
+export type MeResponse = Schemas['MeResponse']
+export type UserStatus = NonNullable<Schemas['UserSummary']['status']>
+export type UserSummary = Schemas['UserSummary']
+export type UserDetail = Schemas['UserDetail']
 
-export interface MeResponse {
-  user: UserBrief
-  superAdmin: boolean
-  permissions: string[]
-  menus: MenuNode[]
-  mustChangePassword: boolean
-}
+export type RoleStatus = NonNullable<Schemas['RoleSummary']['status']>
+export type RoleSummary = Schemas['RoleSummary']
+export type RoleDetail = Schemas['RoleDetail']
+export type RoleBrief = Schemas['RoleBrief']
 
-export type UserStatus = 'ENABLED' | 'DISABLED'
-
-export interface UserSummary {
-  id: number
-  username: string
-  nickname: string
-  status: UserStatus
-  lastLoginAt: string | null
-  createdAt: string
-}
+export type ResourceType = NonNullable<Schemas['ResourceNode']['type']>
+export type ResourceStatus = NonNullable<Schemas['ResourceNode']['status']>
+export type ResourceNode = Schemas['ResourceNode']
+export type ResourceDetail = Schemas['ResourceDetail']
