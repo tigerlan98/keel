@@ -12,13 +12,14 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
-app.use(router)
 
 onUnauthorized(() => {
   useAuthStore(pinia).reset()
-  if (router.currentRoute.value.name !== 'login') {
-    void router.push({ name: 'login' })
+  const current = router.currentRoute.value
+  if (current.name && current.name !== 'login') {
+    void router.push({ name: 'login', query: { redirect: current.fullPath } })
   }
 })
 
+app.use(router)
 app.mount('#app')

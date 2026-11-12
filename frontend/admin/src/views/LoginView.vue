@@ -2,12 +2,15 @@
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { z } from 'zod'
 
-import http, { ApiError } from '@/api/http'
+import { ApiError } from '@/api/http'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
+const auth = useAuthStore()
 const submitting = ref(false)
 const submitError = ref('')
 
@@ -30,8 +33,13 @@ const onSubmit = handleSubmit(async (values) => {
   submitError.value = ''
   submitting.value = true
   try {
-    await http.post('/admin/auth/login', { ...values, device: 'WEB' })
-    await router.push({ name: 'home' })
+    await auth.login(values.username, values.password)
+    const redirect = route.query.redirect
+    const target =
+      typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+        ? redirect
+        : '/'
+    await router.push(target)
   } catch (error) {
     submitError.value = error instanceof ApiError ? error.message : '登录失败，请稍后重试'
   } finally {

@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import { useAuthStore } from '@/stores/auth'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -19,6 +21,12 @@ const router = createRouter({
           component: () => import('@/views/HomeView.vue'),
           meta: { title: '首页' },
         },
+        {
+          path: 'iam/users',
+          name: 'users',
+          component: () => import('@/views/UserListView.vue'),
+          meta: { title: '用户管理' },
+        },
       ],
     },
     {
@@ -28,9 +36,24 @@ const router = createRouter({
   ],
 })
 
-// 当前只维护页面标题；认证跳转在 Phase 1B 接入 /auth/me 后补充。
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   document.title = to.meta.title ? `${String(to.meta.title)} - Keel 管理端` : 'Keel 管理端'
+
+  const auth = useAuthStore()
+  if (to.meta.public) {
+    if (to.name === 'login' && auth.initialized && auth.user) {
+      return { name: 'home' }
+    }
+    return true
+  }
+
+  if (!auth.initialized) {
+    await auth.initialize()
+  }
+  if (!auth.user) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  return true
 })
 
 export default router

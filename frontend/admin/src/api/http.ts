@@ -87,4 +87,12 @@ http.interceptors.response.use(
   },
 )
 
+/**
+ * 获取 CSRF token。Web 登录与写请求前调用，服务端会同时写入 XSRF-TOKEN Cookie。
+ */
+export async function fetchCsrfToken(): Promise<string> {
+  const response = await http.get<ApiResponse<{ token: string }>>('/admin/auth/csrf')
+  return response.data.data.token
+}
+
 export default http

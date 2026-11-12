@@ -36,6 +36,8 @@ cd backend
 mvn verify
 ```
 
+`mvn verify` 会通过 Testcontainers 启动真实 MySQL 8.4 与 Redis 7.4，需要 Docker 可用；Flyway 迁移与 MyBatis-Plus 集成测试会在其中执行。
+
 若当前终端未加载新的用户环境变量，先执行：
 
 ```powershell
@@ -44,11 +46,26 @@ $env:JAVA_HOME = 'D:\env\jdks\openjdk-25.0.2'
 
 构建产物：`backend/keel-bootstrap/target/keel-bootstrap-1.0.0.jar`。
 
+本地启动前先启动 MySQL / Redis（见“部署资源”），并设置对应密码与初始管理员：
+
 ```powershell
+$env:DB_PASSWORD = '<MYSQL_PASSWORD>'
+$env:REDIS_PASSWORD = '<REDIS_PASSWORD>'
+$env:KEEL_ADMIN_USERNAME = 'admin'
+$env:KEEL_ADMIN_PASSWORD = '<强密码>'
 & 'D:\env\jdks\openjdk-25.0.2\bin\java.exe' -jar .\keel-bootstrap\target\keel-bootstrap-1.0.0.jar
 ```
 
-启动后仅暴露 `GET /actuator/health`。当前骨架未接入数据库、Redis、认证与业务接口。
+初始管理员仅在不存在时创建，创建后 `mustChangePassword = true`。
+
+应用启动后仅暴露 `GET /actuator/health`；Flyway 会在启动时自动执行 `iam`、`system`、`audit`、`seed` 四个位置的迁移。
+
+API 文档：
+
+- `/v3/api-docs`：默认文档
+- `/v3/api-docs/admin`：管理端分组
+- `/v3/api-docs/public`：公开接口分组
+- `/swagger-ui.html`：Swagger UI
 
 Maven 模块：
 
@@ -56,8 +73,8 @@ Maven 模块：
 |---|---|
 | `keel-common-core` | 统一返回、错误码、异常、分页结构 |
 | `keel-common-web` | 全局异常处理、校验错误结构、请求 ID |
-| `keel-common-security` | Security / token / 当前用户（Phase 1A 实现） |
-| `keel-common-persistence` | 持久层基础实体与配置（Phase 1A 启用） |
+| `keel-common-security` | Security / token / 当前用户 / CSRF |
+| `keel-common-persistence` | MyBatis-Plus、Flyway、基础实体与审计字段填充 |
 | `keel-common-test` | 测试基座（仅 test 作用域） |
 | `keel-iam` | 用户、角色、资源、菜单、认证与授权 |
 | `keel-system` | 系统参数 |
@@ -86,7 +103,7 @@ pnpm build
 
 两个工程均启用 TypeScript strict、ESLint、Prettier 与 `vue-tsc`。开发服务器将 `/api` 代理到 `http://localhost:8080`。
 
-当前前端为可构建骨架：Admin 含登录页占位、基础布局与 Axios 封装；Portal 含首页占位与匿名 API 客户端。尚未生成 shadcn-vue 业务组件，也尚未接入真实接口与 OpenAPI 类型。
+当前前端状态：Admin 已接入登录、`/auth/me` 会话恢复、路由守卫、401 跳转与用户列表（筛选、排序、分页、加载/空/失败状态）；Portal 仍为首页骨架。尚未生成 shadcn-vue 业务组件，也尚未接入 OpenAPI 类型。
 
 ## 部署资源
 
@@ -110,4 +127,39 @@ docker compose --env-file docker-compose.env up -d
 
 ## 当前阶段
 
-Phase 1A 骨架已完成：9 个后端模块可构建、应用上下文可启动、ArchUnit 基础规则通过；Admin 与 Portal 可安装、类型检查、Lint 与构建。MyBatis-Plus 运行配置、Flyway、SpringDoc、Security token 过滤器与 Testcontainers 集成测试留待 Phase 1A 验证任务。
+Phase 1A 已完成：
+
+- 9 个 Flyway 迁移（`iam` 5 个、`system` 1 个、核心种子 3 个）在空库上按序执行。
+- MyBatis-Plus CRUD、分页、乐观锁与审计字段填充通过集成测试。
+- Testcontainers 真实 MySQL 8.4 / Redis 7.4 集成测试通过。
+- SpringDoc 分组文档 `/v3/api-docs`、`/v3/api-docs/admin`、`/v3/api-docs/public` 可访问。
+- Actuator 仅暴露 `/actuator/health`，其他端点被安全层拦截。
+- 认证链路通过：Web 登录使用 CSRF + `HttpOnly` Cookie，App / Mini 使用 Bearer token，同一设备再次登录会踢掉旧 token。
+- ArchUnit 模块与分层规则通过。
+
+认证接口：
+
+- `GET /api/v1/admin/auth/csrf`
+- `POST /api/v1/admin/auth/login`
+- `POST /api/v1/admin/auth/logout`
+- `GET /api/v1/admin/auth/me`
+
+管理接口：
+
+- `GET /api/v1/admin/iam/users`：用户分页，支持 `page`、`size`、`sort`、`username` 前缀、`status` 筛选
+
+登录行为同步写入 `aud_login_log`，记录 `LOGIN`、`LOGOUT`、`LOGIN_FAILED`。
+
+首次启动可通过 `KEEL_ADMIN_USERNAME` / `KEEL_ADMIN_PASSWORD` 创建超级管理员，创建后要求首次登录改密。
+
+Phase 1B 前后端闭环已完成：
+
+- 前端启动时调用 `/auth/me` 恢复登录态，接入 Pinia 与路由守卫。
+- 未登录或会话失效时返回 401，前端清理登录态并跳转登录页。
+- 用户列表页面支持用户名前缀、状态筛选、排序与分页。
+- 登录、登出、登录失败同步写入 `aud_login_log`。
+
+剩余：
+
+- OpenAPI 快照导出与 TypeScript 类型生成。
+- Playwright 登录、401、用户列表关键路径。

@@ -2,10 +2,14 @@ spring:
   application:
     name: keel
   profiles:
-    active: local
+    default: local
   jackson:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai
+  flyway:
+    locations: classpath:db/migration/iam,classpath:db/migration/system,classpath:db/migration/audit,classpath:db/migration/seed
+    validate-on-migrate: true
+    clean-disabled: true
 
 server:
   port: 8080
@@ -27,3 +31,16 @@ management:
 logging:
   pattern:
     level: "%5p [%X{requestId:-}]"
+
+keel:
+  security:
+    cookie-name: KEEL_TOKEN
+    cookie-secure: false
+    web-idle-timeout: 30m
+    web-absolute-timeout: 12h
+    app-idle-timeout: 7d
+    app-absolute-timeout: 30d
+    last-access-write-interval: 5m
+  admin:
+    username: ${KEEL_ADMIN_USERNAME:}
+    password: ${KEEL_ADMIN_PASSWORD:}
