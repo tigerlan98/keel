@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.keel</groupId>
+        <artifactId>keel</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>keel-audit</artifactId>
+    <name>keel-audit</name>
+    <description>操作日志与登录日志模块</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.keel</groupId>
+            <artifactId>keel-common-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.keel</groupId>
+            <artifactId>keel-common-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.keel</groupId>
+            <artifactId>keel-common-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.keel</groupId>
+            <artifactId>keel-common-persistence</artifactId>
+        </dependency>
+    </dependencies>
+</project>

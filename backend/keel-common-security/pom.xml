@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.keel</groupId>
+        <artifactId>keel</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>keel-common-security</artifactId>
+    <name>keel-common-security</name>
+    <description>Security、token、当前用户与鉴权</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.keel</groupId>
+            <artifactId>keel-common-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.keel</groupId>
+            <artifactId>keel-common-web</artifactId>
+        </dependency>
+        <!-- 骨架阶段仅用于编译校验，运行期在 Phase 1A 启用 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

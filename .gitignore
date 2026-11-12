@@ -1,0 +1,45 @@
+# 本地配置与密钥（禁止提交真实密码）
+deploy/docker-compose.env
+docker-compose.env
+.env
+.env.local
+.env.*.local
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Claude Code 本地设置
+.claude/settings.local.json
+.claude/*.local.json
+
+# Maven Wrapper（项目约定不提交，开发环境需安装 Maven 3.9+）
+backend/mvnw
+backend/mvnw.cmd
+backend/.mvn/
+
+# 后端构建产物、日志与 JVM 崩溃文件
+target/
+logs/
+*.log
+*.pid
+hs_err_pid*
+replay_pid*
+*.hprof
+
+# 前端依赖、构建产物与测试报告
+node_modules/
+.pnpm-store/
+dist/
+dist-ssr/
+coverage/
+.vite/
+.eslintcache
+*.tsbuildinfo
+pnpm-debug.log*
+playwright-report/
+test-results/
+blob-report/
