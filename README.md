@@ -1,229 +1,221 @@
 # Keel
 
-Keel 项目工作区。后端与前端工程位于独立子目录，研发阶段共用当前 Git 仓库；各工程独立安装依赖、独立构建与部署。
+![verify](https://github.com/tigerlan98/keel/actions/workflows/verify.yml/badge.svg)
+![Java](https://img.shields.io/badge/Java-25-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-brightgreen)
+![Vue](https://img.shields.io/badge/Vue-3-42b883)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-## 目录结构
+Keel 是一个面向管理后台的通用脚手架：Spring Boot 多模块后端、Vue 3 管理端与匿名门户，内置认证、RBAC、系统参数、审计日志与同域部署。
 
-```
+## 特性
+
+- **认证与会话**：Web 使用 `HttpOnly` Cookie + CSRF，App / 小程序使用 Bearer token；按设备单会话，支持强制下线与登录失败锁定。
+- **RBAC**：统一资源树、多角色、`SUPER_ADMIN` 绕过；权限码与菜单树缓存于 Redis，变更按范围失效。
+- **系统参数**：由 Flyway 迁移维护，后台只更新参数值；读取走 Redis 缓存，支持公开配置接口。
+- **审计日志**：操作日志异步写入、登录日志同步写入；分页查询与保留期分批清理。
+- **契约驱动**：SpringDoc 分组文档、OpenAPI 快照、前端 TypeScript 类型自动生成。
+- **工程质量**：Maven 多模块 + ArchUnit 边界校验、Testcontainers 集成测试、Flyway 版本化迁移、Playwright E2E。
+- **同域部署**：Docker Compose + Nginx，统一入口 `/admin/`、`/portal/`、`/api/v1`。
+
+## 技术栈
+
+| 层 | 技术 |
+|---|---|
+| 后端 | Java 25、Spring Boot 4.1、Spring Security、MyBatis-Plus、Flyway、SpringDoc |
+| 数据 | MySQL 8、Redis 7 |
+| 管理端 | Vue 3、TypeScript、Vite、Pinia、Vue Router、shadcn-vue、Tailwind CSS v4 |
+| 表单与表格 | VeeValidate + Zod、TanStack Table、Lucide |
+| 测试 | JUnit 5、Testcontainers、ArchUnit、Playwright |
+| 构建 | Maven 3.9+、pnpm 10、Docker |
+
+## 项目结构
+
+```text
 keel/
-├── backend/            后端：Spring Boot 多模块 Maven 工程
+├── backend/            Spring Boot 多模块 Maven 工程
 ├── frontend/
-│   ├── admin/          管理端：Vue 3 + TypeScript + Vite + shadcn-vue
-│   └── portal/         门户：Vue 3 + TypeScript + Vite + Tailwind
-├── docs/               需求、设计、规则与交接文档
-├── scripts/            数据库脚本等辅助资源
-├── deploy/             部署资源：Docker Compose 与环境变量模板
-└── CLAUDE.md           项目协作与开发规范
+│   ├── admin/          管理端（Vue 3 + TypeScript + Vite + shadcn-vue）
+│   └── portal/         门户（Vue 3 + TypeScript + Vite + Tailwind）
+├── docs/               需求、设计、规则与项目文档
+├── deploy/             Docker Compose、Nginx 与环境变量模板
+├── scripts/            OpenAPI 导出、数据库脚本与验证脚本
+└── .github/            GitHub Actions
 ```
 
-面向 AI Agent 与新人：根目录 `AGENTS.md`（仓库与后端约定）、`frontend/admin/AGENTS.md`、`frontend/portal/AGENTS.md`。
+## 快速开始
 
-## 环境要求
+### 环境要求
 
 | 工具 | 版本 |
 |---|---|
-| JDK | 25（本机：`D:\env\jdks\openjdk-25.0.2`） |
-| Maven | 3.9+（本机：3.9.13） |
+| JDK | 25 |
+| Maven | 3.9+ |
 | Node.js | 24 |
 | pnpm | 10 |
+| Docker | 用于 Testcontainers 与本地部署 |
 
-本机用户级 `JAVA_HOME` 已指向 JDK 25（`D:\env\jdks\openjdk-25.0.2`），Maven 会使用它。系统 `PATH` 中的 `java` 仍可能指向 JDK 17，直接运行 Java 应用时使用 JDK 25 的完整路径，或调整系统 `PATH`。
+项目不提交 Maven Wrapper，请确保 `mvn -v` 运行在 Java 25 上。
 
-项目不提交 Maven Wrapper，开发环境与 CI 需预装 Maven 3.9+。执行 `mvn -v` 应显示 Maven 3.9+ 且运行在 Java 25 上。
+> Windows PowerShell 中可将示例里的 `cp` 替换为 `Copy-Item`，`export` 替换为 `$env:NAME = 'value'`。
 
-## 后端
+### 1. 启动依赖服务
 
-```powershell
+```bash
+cd deploy
+cp docker-compose.env.example docker-compose.env
+# 编辑 docker-compose.env，填写 MySQL / Redis 密码
+docker compose --env-file docker-compose.env up -d
+```
+
+### 2. 启动后端
+
+```bash
 cd backend
-mvn verify
+mvn verify        # 需要 Docker：Testcontainers 会启动真实 MySQL 与 Redis
+java -jar keel-bootstrap/target/keel-bootstrap-1.0.0.jar
 ```
 
-`mvn verify` 会通过 Testcontainers 启动真实 MySQL 8.4 与 Redis 7.4，需要 Docker 可用；Flyway 迁移与 MyBatis-Plus 集成测试会在其中执行。
+本地运行需提供数据库与 Redis 连接信息：
 
-若当前终端未加载新的用户环境变量，先执行：
-
-```powershell
-$env:JAVA_HOME = 'D:\env\jdks\openjdk-25.0.2'
+```bash
+export DB_PASSWORD=<mysql-password>
+export REDIS_PASSWORD=<redis-password>
 ```
 
-构建产物：`backend/keel-bootstrap/target/keel-bootstrap-1.0.0.jar`。
+初始管理员由 Flyway 种子创建，用户名为 `admin`。默认密码为本地开发固定值，首次登录后请立即修改。
 
-本地启动前先启动 MySQL / Redis（见“部署资源”），并设置对应密码：
+启动后可访问：
 
-```powershell
-$env:DB_PASSWORD = '<MYSQL_PASSWORD>'
-$env:REDIS_PASSWORD = '<REDIS_PASSWORD>'
-& 'D:\env\jdks\openjdk-25.0.2\bin\java.exe' -jar .\keel-bootstrap\target\keel-bootstrap-1.0.0.jar
+- `http://localhost:8080/actuator/health`：健康检查
+- `http://localhost:8080/swagger-ui.html`：Swagger UI
+- `/v3/api-docs`、`/v3/api-docs/admin`、`/v3/api-docs/public`：OpenAPI 分组文档
+
+### 3. 启动管理端
+
+```bash
+cd frontend/admin
+pnpm install
+pnpm dev          # http://localhost:5173
 ```
 
-初始管理员由 Flyway 种子创建（用户名 `admin`），默认密码为开发脚手架固定值，首次登录后请立即修改。
+### 4. 启动门户
 
-应用启动后仅暴露 `GET /actuator/health`；Flyway 会在启动时自动执行 `iam`、`system`、`audit`、`seed` 四个位置的迁移。
+```bash
+cd frontend/portal
+pnpm install
+pnpm dev          # http://localhost:5174
+```
 
-API 文档：
+开发服务器会将 `/api` 代理到 `http://localhost:8080`。
 
-- `/v3/api-docs`：默认文档
-- `/v3/api-docs/admin`：管理端分组
-- `/v3/api-docs/public`：公开接口分组
-- `/swagger-ui.html`：Swagger UI
+### 5. 完整同域部署
 
-Maven 模块：
+```bash
+cd backend && mvn verify
+cd ../deploy
+docker compose --env-file docker-compose.env --profile full up -d --build
+```
+
+访问：
+
+| 路径 | 内容 |
+|---|---|
+| `http://localhost/admin/` | 管理端 |
+| `http://localhost/portal/` | 门户 |
+| `http://localhost/api/v1/public/system/config` | 公开配置 |
+| `http://localhost/health` | 健康检查 |
+
+更多部署说明见 [`deploy/README.md`](deploy/README.md)。
+
+## 后端模块
 
 | 模块 | 职责 |
 |---|---|
-| `keel-common-core` | 统一返回、错误码、异常、分页结构 |
-| `keel-common-web` | 全局异常处理、校验错误结构、请求 ID |
-| `keel-common-security` | Security / token / 当前用户 / CSRF |
-| `keel-common-persistence` | MyBatis-Plus、Flyway、基础实体与审计字段填充 |
-| `keel-common-test` | 测试基座（仅 test 作用域） |
+| `keel-common-core` | 统一返回、错误码、异常与分页结构 |
+| `keel-common-web` | 全局异常处理、校验错误、请求 ID |
+| `keel-common-security` | Security、token、当前用户、CSRF、登录锁定 |
+| `keel-common-persistence` | MyBatis-Plus、Flyway、审计字段填充 |
+| `keel-common-test` | 测试基座（test 作用域） |
 | `keel-iam` | 用户、角色、资源、菜单、认证与授权 |
 | `keel-system` | 系统参数 |
 | `keel-audit` | 操作日志、登录日志 |
 | `keel-bootstrap` | 启动、装配、全局配置与 ArchUnit 测试 |
 
-## 前端
+## API 与契约
 
-Admin：
+- 管理端接口：`/api/v1/admin/**`
+- 公开接口：`/api/v1/public/**`
+- 统一响应：`{ code, message, data }`
+- 分页参数：`page` 从 1 开始，`size` 默认 20、上限 100
 
-```powershell
-cd frontend/admin
-pnpm install
-pnpm dev          # http://localhost:5173
-pnpm build
-```
+更新接口后需同步契约：
 
-Portal：
-
-```powershell
-cd frontend/portal
-pnpm install
-pnpm dev          # http://localhost:5174
-pnpm build
-```
-
-两个工程均启用 TypeScript strict、ESLint、Prettier 与 `vue-tsc`。开发服务器将 `/api` 代理到 `http://localhost:8080`。
-
-当前前端状态：Admin 已接入登录、`/auth/me` 会话恢复、路由守卫、401/403、菜单驱动侧边栏与按钮权限，并完成用户、角色、资源、系统参数、操作日志、登录日志页面；API 类型由 OpenAPI 快照生成。Portal 已接入公开配置接口，首页展示系统名称与 Logo，内容仍为骨架。
-
-## 部署资源
-
-`deploy/` 存放本地依赖服务与同域部署配置。
-
-```powershell
-cd deploy
-Copy-Item docker-compose.env.example docker-compose.env   # 首次使用，填写真实密码
-docker compose --env-file docker-compose.env up -d        # 仅 MySQL / Redis
-docker compose --env-file docker-compose.env --profile full up -d --build   # 完整同域栈
-```
-
-完整栈包含后端、Admin、Portal 与 Nginx，访问 `/admin/`、`/portal/`、`/api/v1`、`/health`。启动前需在 `backend` 执行 `mvn verify` 生成 jar；详见 `deploy/README.md`。
-
-`deploy/docker-compose.env` 已被 `.gitignore` 忽略，禁止提交真实密码。
-
-## 设计文档
-
-- 文档索引：`docs/design/00-文档索引.md`
-- 技术选型与架构：`docs/design/02-技术选型与整体架构.md`
-- 实施计划与工程规范：`docs/design/05-实施计划与工程规范.md`
-- 数据库规范：`docs/rules/database-rules.md`
-- API 规范：`docs/rules/api-rules.md`
-
-## 当前阶段
-
-Phase 1A / 1B / 2 / 3 / 4 已完成；Phase 5 加固与交付进行中。以下为各阶段交付摘要。
-
-Phase 1A 已完成：
-
-- 9 个 Flyway 迁移（`iam` 5 个、`system` 1 个、核心种子 3 个）在空库上按序执行。
-- MyBatis-Plus CRUD、分页、乐观锁与审计字段填充通过集成测试。
-- Testcontainers 真实 MySQL 8.4 / Redis 7.4 集成测试通过。
-- SpringDoc 分组文档 `/v3/api-docs`、`/v3/api-docs/admin`、`/v3/api-docs/public` 可访问。
-- Actuator 仅暴露 `/actuator/health`，其他端点被安全层拦截。
-- 认证链路通过：Web 登录使用 CSRF + `HttpOnly` Cookie，App / Mini 使用 Bearer token，同一设备再次登录会踢掉旧 token。
-- ArchUnit 模块与分层规则通过。
-
-认证接口：
-
-- `GET /api/v1/admin/auth/csrf`
-- `POST /api/v1/admin/auth/login`
-- `POST /api/v1/admin/auth/logout`
-- `GET /api/v1/admin/auth/me`
-- `POST /api/v1/admin/auth/change-password`
-
-管理接口（Phase 1B / 2 / 3）：
-
-- 用户：分页、详情、创建、编辑、启停、重置密码、查询/替换角色、按用户或设备强制下线
-- 角色：分页、详情、创建、编辑、删除、查询/替换资源授权
-- 资源：树、详情、更新展示属性、启停；资源的创建/删除仅由 Flyway 迁移维护
-- 系统参数：分页、详情、更新参数值；参数创建/删除仅由 Flyway 迁移维护
-- 操作日志 / 登录日志：分页与详情，只读
-- 公开接口：`GET /api/v1/public/system/config`，仅返回 `public_flag = 1` 且属于 `system.*` 的参数
-
-登录行为同步写入 `aud_login_log`，记录 `LOGIN`、`LOGOUT`、`LOGIN_FAILED`。
-
-初始管理员由 Flyway 种子创建（`admin`），不再依赖 `KEEL_ADMIN_*` 环境变量。
-
-Phase 1B 前后端闭环已完成：
-
-- 前端启动时调用 `/auth/me` 恢复登录态，接入 Pinia 与路由守卫。
-- 未登录或会话失效时返回 401，前端清理登录态并跳转登录页。
-- 用户列表页面支持用户名前缀、状态筛选、排序与分页。
-- 登录、登出、登录失败同步写入 `aud_login_log`。
-- OpenAPI 快照（`frontend/admin/openapi/openapi.json`）由后端导出，Admin 类型由快照生成。
-- Playwright 覆盖登录、登出、登录失败、401 跳转、用户列表筛选/分页/错误重试。
-
-Phase 2 RBAC 已完成：
-
-- 权限码与菜单树按用户查询并缓存于 Redis（`iam:perm:{userId}`，TTL 30 分钟）；角色、资源、用户-角色与用户状态变更后按影响范围失效。
-- `PermissionChecker` 先判断 `SUPER_ADMIN`，再校验权限码；普通管理员只看到被授权菜单与按钮。
-- 角色保护：`SUPER_ADMIN` 不可删除/禁用/改 code；被用户引用时禁止删除。
-- 资源保护：停用存在启用子资源的目录/菜单返回 409；父级非法或成环返回 400；`type/code/path/component` 不可修改。
-- 用户禁用、重置密码与强制下线会立即吊销 token；`mustChangePassword` 由服务端强制拦截，仅允许改密、登出、`/me` 与 CSRF。
-- Admin 侧边栏由后端菜单驱动，登录落在第一个有权限菜单；新增角色、资源、用户页面与 `v-permission` 按钮权限；403 只提示不退出登录。
-- Playwright 覆盖菜单可见性、403、角色创建、资源停用冲突与强制改密，共 14 个用例。
-- 登录失败锁定：按用户名 + IP 在 Redis 计数，连续 5 次失败锁定 15 分钟，返回 429 `AUTH_TOO_MANY_ATTEMPTS`；成功登录清零。
-
-Phase 3 系统参数与审计日志已完成：
-
-- 系统参数查询/更新与公开配置接口可用；参数读取走 Redis 缓存（TTL 30 分钟，更新后立即失效）。
-- `ConfigProvider` 已接入 token 超时与审计日志保留期等运行参数。
-- 操作日志通过 `@OperationLog` 切面在接口成功后发布事件并异步落库；请求参数脱敏并截断 2 KB，事务回滚不产生日志。
-- 登录日志保持同步写入，记录 `LOGIN`、`LOGOUT`、`LOGIN_FAILED` 与失败原因。
-- 操作日志与登录日志支持分页/详情查询；每日 02:00 按保留期分批清理（单批 1000 条），默认操作日志 180 天、登录日志 365 天，可通过系统参数调整。
-- Admin 新增系统参数、操作日志、登录日志页面；OpenAPI 快照与前端类型已同步。
-- Playwright 新增系统参数、操作日志、登录日志 8 个用例，并补充登录锁定 429 提示用例（当前合计 23 个）。
-
-Phase 4 Portal 已完成：
-
-- Portal 已接入 `GET /api/v1/public/system/config`，首页展示系统名称与 Logo，并处理加载、失败与重试状态。
-- 匿名客户端，不引入认证逻辑。
-- 同域部署已验证：`/admin/`、`/portal/`、`/api/v1/public/system/config` 可访问，匿名访问管理端接口返回 401。
-- 内容信息架构仍保持骨架级。
-
-Phase 5 加固与交付（进行中）：
-
-- 后端 `mvn verify` 通过（39 个测试），Admin Playwright 23 个用例通过。
-- OpenAPI 快照已重新导出，Phase 3 响应 DTO 补齐必填标注，登录 429 已进入契约。
-- 已补充 Dockerfile、Nginx 同域配置、完整 Compose 与三份 `AGENTS.md`。
-- `schema.sql` 与 03 的 8 张表结构核对一致；新增 `scripts/verify.ps1` 全量验证入口。
-- 剩余：生产部署（暂缓，需域名/HTTPS）、多实例 ShedLock；Portal 扩展时再评估 E2E。
-
-CI 与发布：
-
-- GitHub Actions：`.github/workflows/verify.yml`（PR / `main`）、`.github/workflows/release.yml`（`v*` tag 仅触发验证，不创建 Release）。
-- 本地全量验证：`powershell -File scripts/verify.ps1`。
-- 版本策略：固定版本 + Git tag，正式发布以 `v*` tag 为入口。
-
-契约与 E2E 命令：
-
-```powershell
-# 后端导出 OpenAPI 快照到 frontend/admin/openapi/openapi.json（需要 Docker）
-powershell -File scripts/openapi/export-openapi.ps1
+```bash
+pwsh -File scripts/openapi/export-openapi.ps1
 
 cd frontend/admin
-pnpm openapi:generate   # 重新生成 src/api/generated.ts
-pnpm openapi:check      # 校验生成物与已提交内容一致
-pnpm test:e2e           # Playwright（自动启动 Vite，接口由用例 mock）
+pnpm openapi:generate   # 生成 src/api/generated.ts
+pnpm openapi:check      # 校验生成物与快照一致
 ```
 
-后端 OpenAPI 包含 `cookieAuth` / `bearerAuth` 安全方案、端点摘要、参数说明与响应示例；DTO 中必填字段通过 `@Schema(requiredMode = REQUIRED)` 写入契约。
+## 测试与 CI
+
+```bash
+# 后端：单元、集成、API 与架构测试（需要 Docker）
+cd backend && mvn verify
+
+# 管理端 E2E
+cd frontend/admin && pnpm test:e2e
+
+# 全量验证
+pwsh -File scripts/verify.ps1
+```
+
+GitHub Actions：
+
+- `.github/workflows/verify.yml`：PR 与 `main` 推送时执行全量验证。
+- `.github/workflows/release.yml`：`v*` tag 触发验证。
+
+## 配置
+
+后端通过 Spring Profile 区分环境，敏感配置使用环境变量注入：
+
+| 变量 | 说明 |
+|---|---|
+| `SPRING_PROFILES_ACTIVE` | `local` / `test` / `prod` |
+| `DB_HOST` / `DB_PORT` / `DB_DATABASE` | MySQL 连接 |
+| `DB_USERNAME` / `DB_PASSWORD` | MySQL 账号 |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis 连接 |
+| `TZ` / `JAVA_TOOL_OPTIONS` | 时区配置 |
+| `VITE_API_BASE_URL` | 前端构建期 API 前缀，默认 `/api/v1` |
+
+## 文档
+
+- [文档索引](docs/design/00-文档索引.md)
+- [需求与功能模块](docs/design/01-需求与功能模块梳理.md)
+- [技术选型与整体架构](docs/design/02-技术选型与整体架构.md)
+- [数据库设计](docs/design/03-数据库设计.md)
+- [API 接口设计](docs/design/04-API接口设计.md)
+- [实施计划与工程规范](docs/design/05-实施计划与工程规范.md)
+- [数据库规范](docs/rules/database-rules.md)
+- [API 规范](docs/rules/api-rules.md)
+
+面向 Agent 与贡献者的约定见根目录 [`AGENTS.md`](AGENTS.md)、[`frontend/admin/AGENTS.md`](frontend/admin/AGENTS.md) 与 [`frontend/portal/AGENTS.md`](frontend/portal/AGENTS.md)。
+
+## 状态
+
+已完成：认证与会话、RBAC、用户/角色/资源管理、系统参数、操作日志、登录日志、登录失败锁定、管理端页面、Portal 公开配置、同域部署与 CI 验证。
+
+计划中：生产 TLS 与网关配置、多实例任务锁（ShedLock）、Portal 内容扩展与 E2E。
+
+## 贡献
+
+1. 阅读 `AGENTS.md` 与相关设计/规则文档。
+2. 修改后运行 `pwsh -File scripts/verify.ps1`。
+3. 数据库与 API 变更需同步设计文档与 OpenAPI 快照。
+4. 提交 PR 前确保 CI 通过。
+
+## License
+
+本项目采用 [MIT License](LICENSE)。
