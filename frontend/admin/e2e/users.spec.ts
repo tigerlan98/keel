@@ -67,7 +67,8 @@ test.describe('用户列表', () => {
     await page.getByRole('button', { name: '下一页' }).click()
 
     await expect(page.getByText('2 / 2')).toBeVisible()
-    expect(requests.at(-1)?.searchParams.get('page')).toBe('2')
+    // 页码文案是同步更新的，请求发出/抵达是异步的，直接断言会读到上一次请求。
+    await expect.poll(() => requests.at(-1)?.searchParams.get('page')).toBe('2')
   })
 
   test('加载失败时展示错误并可重试', async ({ page }) => {

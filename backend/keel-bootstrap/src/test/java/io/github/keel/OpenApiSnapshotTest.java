@@ -1,6 +1,7 @@
 package io.github.keel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.keel.support.IntegrationTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,9 +48,14 @@ class OpenApiSnapshotTest extends IntegrationTestSupport {
             assertThat(response.statusCode()).as("group %s", group).isEqualTo(200);
             assertThat(response.body()).as("group %s", group).contains("\"openapi\"");
 
+            // servers 由 SpringDoc 按测试实例的随机端口生成，属于运行期信息；
+            // 保留它会导致每次导出内容不同，契约 diff 永远失败。
+            ObjectNode document = (ObjectNode) objectMapper.readTree(response.body());
+            document.remove("servers");
+
             String snapshot = objectMapper.writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(objectMapper.readTree(response.body()))
-                    + System.lineSeparator();
+                    .writeValueAsString(document)
+                    + "\n";
             Files.writeString(outputDir.resolve(group + ".json"), snapshot);
         }
     }
