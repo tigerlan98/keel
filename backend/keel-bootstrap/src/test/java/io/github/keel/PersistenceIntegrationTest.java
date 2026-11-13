@@ -39,10 +39,11 @@ class PersistenceIntegrationTest extends IntegrationTestSupport {
     @Test
     void migrationsRunInOrderAndSeedsAreLoaded() {
         assertThat(flyway.info().pending()).isEmpty();
-        assertThat(flyway.info().applied()).hasSize(11);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9003");
+        assertThat(flyway.info().applied()).hasSize(12);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9004");
 
         assertThat(count("SELECT COUNT(*) FROM iam_role WHERE code = 'SUPER_ADMIN'")).isEqualTo(1);
+        assertThat(count("SELECT COUNT(*) FROM iam_user WHERE username = 'admin'")).isEqualTo(1);
         assertThat(count("SELECT COUNT(*) FROM iam_resource")).isEqualTo(22);
         assertThat(count("SELECT COUNT(*) FROM sys_config")).isEqualTo(10);
     }

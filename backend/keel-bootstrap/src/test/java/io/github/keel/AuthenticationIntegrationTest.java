@@ -152,6 +152,14 @@ class AuthenticationIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void seededSuperAdminCanLogin() throws Exception {
+        String body = "{\"username\":\"admin\",\"password\":\"admin123\",\"device\":\"APP\"}";
+        HttpResponse<String> response = postJson(HttpClient.newHttpClient(), LOGIN_PATH, body, null);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("\"superAdmin\":true", "\"mustChangePassword\":false");
+    }
+
+    @Test
     void repeatedFailuresLockLoginByUsernameAndIp() throws Exception {
         HttpClient client = HttpClient.newHttpClient();
 

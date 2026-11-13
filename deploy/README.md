@@ -33,14 +33,14 @@ cd backend
 mvn verify
 ```
 
-在 `deploy/docker-compose.env` 中填写数据库密码、Redis 密码与初始管理员：
+在 `deploy/docker-compose.env` 中填写数据库密码与 Redis 密码：
 
 ```dotenv
-KEEL_ADMIN_USERNAME=admin
-KEEL_ADMIN_PASSWORD=<强密码>
 BACKEND_PORT=8080
 HTTP_PORT=80
 ```
+
+初始管理员由 Flyway 种子创建（用户名 `admin`），默认密码为开发脚手架固定值，首次登录后请立即修改。
 
 启动完整栈：
 
@@ -62,7 +62,7 @@ docker compose --env-file docker-compose.env --profile full up -d --build
 
 - 后端镜像使用 `backend/keel-bootstrap/target/keel-bootstrap-1.0.0.jar`，需先执行 `mvn verify` 或 `mvn package`。
 - Admin / Portal 在镜像内以 `/admin/`、`/portal/` 为 base 构建，由 Nginx 同域代理。
-- `KEEL_ADMIN_USERNAME` / `KEEL_ADMIN_PASSWORD` 仅在对应管理员不存在时生效；创建后修改环境变量不会重置密码。
+- 初始管理员由全局种子迁移创建，仅做 `WHERE NOT EXISTS` 插入，不会覆盖已有账号。
 - Nginx 传递 `X-Forwarded-For`，后端启用 `forward-headers-strategy=framework`，登录锁定按真实来源 IP 计数。
 
 停止：

@@ -45,6 +45,3 @@ keel:
     app-idle-timeout: 7d
     app-absolute-timeout: 30d
     last-access-write-interval: 5m
-  admin:
-    username: ${KEEL_ADMIN_USERNAME:}
-    password: ${KEEL_ADMIN_PASSWORD:}

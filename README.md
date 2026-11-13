@@ -48,17 +48,15 @@ $env:JAVA_HOME = 'D:\env\jdks\openjdk-25.0.2'
 
 构建产物：`backend/keel-bootstrap/target/keel-bootstrap-1.0.0.jar`。
 
-本地启动前先启动 MySQL / Redis（见“部署资源”），并设置对应密码与初始管理员：
+本地启动前先启动 MySQL / Redis（见“部署资源”），并设置对应密码：
 
 ```powershell
 $env:DB_PASSWORD = '<MYSQL_PASSWORD>'
 $env:REDIS_PASSWORD = '<REDIS_PASSWORD>'
-$env:KEEL_ADMIN_USERNAME = 'admin'
-$env:KEEL_ADMIN_PASSWORD = '<强密码>'
 & 'D:\env\jdks\openjdk-25.0.2\bin\java.exe' -jar .\keel-bootstrap\target\keel-bootstrap-1.0.0.jar
 ```
 
-初始管理员仅在不存在时创建，创建后 `mustChangePassword = true`。
+初始管理员由 Flyway 种子创建（用户名 `admin`），默认密码为开发脚手架固定值，首次登录后请立即修改。
 
 应用启动后仅暴露 `GET /actuator/health`；Flyway 会在启动时自动执行 `iam`、`system`、`audit`、`seed` 四个位置的迁移。
 
@@ -113,7 +111,7 @@ pnpm build
 
 ```powershell
 cd deploy
-Copy-Item docker-compose.env.example docker-compose.env   # 首次使用，填写真实密码与初始管理员
+Copy-Item docker-compose.env.example docker-compose.env   # 首次使用，填写真实密码
 docker compose --env-file docker-compose.env up -d        # 仅 MySQL / Redis
 docker compose --env-file docker-compose.env --profile full up -d --build   # 完整同域栈
 ```
@@ -163,7 +161,7 @@ Phase 1A 已完成：
 
 登录行为同步写入 `aud_login_log`，记录 `LOGIN`、`LOGOUT`、`LOGIN_FAILED`。
 
-首次启动可通过 `KEEL_ADMIN_USERNAME` / `KEEL_ADMIN_PASSWORD` 创建超级管理员，创建后要求首次登录改密。
+初始管理员由 Flyway 种子创建（`admin`），不再依赖 `KEEL_ADMIN_*` 环境变量。
 
 Phase 1B 前后端闭环已完成：
 
@@ -208,7 +206,13 @@ Phase 5 加固与交付（进行中）：
 - OpenAPI 快照已重新导出，Phase 3 响应 DTO 补齐必填标注，登录 429 已进入契约。
 - 已补充 Dockerfile、Nginx 同域配置、完整 Compose 与三份 `AGENTS.md`。
 - `schema.sql` 与 03 的 8 张表结构核对一致；新增 `scripts/verify.ps1` 全量验证入口。
-- 剩余：发布流程与版本策略、CI 平台绑定、Portal 测试与内容决策。
+- 剩余：生产部署（暂缓，需域名/HTTPS）、多实例 ShedLock；Portal 扩展时再评估 E2E。
+
+CI 与发布：
+
+- GitHub Actions：`.github/workflows/verify.yml`（PR / `main`）、`.github/workflows/release.yml`（`v*` tag 仅触发验证，不创建 Release）。
+- 本地全量验证：`powershell -File scripts/verify.ps1`。
+- 版本策略：固定版本 + Git tag，正式发布以 `v*` tag 为入口。
 
 契约与 E2E 命令：
 
