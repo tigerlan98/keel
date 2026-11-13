@@ -1,5 +1,6 @@
 package io.github.keel.iam.interfaces.admin;
 
+import io.github.keel.common.core.audit.OperationLog;
 import io.github.keel.common.core.result.PageResult;
 import io.github.keel.common.core.result.Result;
 import io.github.keel.iam.application.authentication.Device;
@@ -92,6 +93,7 @@ public class UserController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@perm.has('iam:user:create')")
+    @OperationLog(module = "iam", action = "CREATE")
     public Result<UserDetail> create(@Valid @RequestBody CreateUserRequest request) {
         UserDetailView view = userApplicationService.create(new CreateUserCommand(
                 request.username(),
@@ -106,6 +108,7 @@ public class UserController {
     @Operation(operationId = "updateUser", summary = "更新用户资料", description = "username 不可修改；email / phone 传 null 表示清空。")
     @PutMapping("/{id}")
     @PreAuthorize("@perm.has('iam:user:update')")
+    @OperationLog(module = "iam", action = "UPDATE")
     public Result<UserDetail> update(@PathVariable long id, @Valid @RequestBody UpdateUserRequest request) {
         UserDetailView view = userApplicationService.update(id, new UpdateUserCommand(
                 request.nickname(),
@@ -118,6 +121,7 @@ public class UserController {
     @Operation(operationId = "updateUserStatus", summary = "启用/禁用用户", description = "禁用时立即吊销该用户全部 token 并清理权限缓存。")
     @PatchMapping("/{id}/status")
     @PreAuthorize("@perm.has('iam:user:status')")
+    @OperationLog(module = "iam", action = "STATUS_CHANGE")
     public Result<UserDetail> updateStatus(@PathVariable long id,
                                            @Valid @RequestBody UpdateUserStatusRequest request) {
         return Result.success(toDetail(userApplicationService.updateStatus(
@@ -128,6 +132,7 @@ public class UserController {
     @ApiResponse(responseCode = "204", description = "密码已重置")
     @PostMapping("/{id}/reset-password")
     @PreAuthorize("@perm.has('iam:user:reset-password')")
+    @OperationLog(module = "iam", action = "UPDATE")
     public ResponseEntity<Void> resetPassword(@PathVariable long id,
                                               @Valid @RequestBody ResetPasswordRequest request) {
         userApplicationService.resetPassword(id, new ResetPasswordCommand(
@@ -149,6 +154,7 @@ public class UserController {
     @ApiResponse(responseCode = "204", description = "分配成功")
     @PutMapping("/{id}/roles")
     @PreAuthorize("@perm.has('iam:user:assign-role')")
+    @OperationLog(module = "iam", action = "ASSIGN")
     public ResponseEntity<Void> replaceRoles(@PathVariable long id,
                                              @Valid @RequestBody AssignRolesRequest request) {
         userApplicationService.replaceRoles(id, request.roleIds());
@@ -159,6 +165,7 @@ public class UserController {
     @ApiResponse(responseCode = "204", description = "已下线")
     @DeleteMapping("/{id}/sessions")
     @PreAuthorize("@perm.has('iam:user:force-logout')")
+    @OperationLog(module = "iam", action = "DELETE")
     public ResponseEntity<Void> forceLogout(@PathVariable long id) {
         userApplicationService.forceLogout(id);
         return ResponseEntity.noContent().build();
@@ -168,6 +175,7 @@ public class UserController {
     @ApiResponse(responseCode = "204", description = "已下线")
     @DeleteMapping("/{id}/sessions/{device}")
     @PreAuthorize("@perm.has('iam:user:force-logout')")
+    @OperationLog(module = "iam", action = "DELETE")
     public ResponseEntity<Void> forceLogoutDevice(@PathVariable long id, @PathVariable Device device) {
         userApplicationService.forceLogoutDevice(id, device.loginType(), device.name());
         return ResponseEntity.noContent().build();

@@ -1,7 +1,9 @@
 package io.github.keel.common.security.token;
 
+import io.github.keel.common.core.config.ConfigProvider;
 import io.github.keel.common.security.config.SecurityTokenProperties;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -29,11 +31,12 @@ public class TokenService {
 
     private final StringRedisTemplate redis;
     private final SecurityTokenProperties properties;
+    private final ObjectProvider<ConfigProvider> configProvider;
 
     public IssuedToken issue(long userId, String loginType, String device, String ip, String userAgent) {
         boolean web = LOGIN_TYPE_ADMIN.equals(loginType);
-        Duration idleTimeout = web ? properties.webIdleTimeout() : properties.appIdleTimeout();
-        Duration absoluteTimeout = web ? properties.webAbsoluteTimeout() : properties.appAbsoluteTimeout();
+        Duration idleTimeout = web ? webIdleTimeout() : appIdleTimeout();
+        Duration absoluteTimeout = web ? webAbsoluteTimeout() : appAbsoluteTimeout();
 
         String rawToken = generateToken();
         String tokenHash = sha256(rawToken);
@@ -154,7 +157,53 @@ public class TokenService {
     }
 
     private Duration idleTimeout(String loginType) {
-        return LOGIN_TYPE_ADMIN.equals(loginType) ? properties.webIdleTimeout() : properties.appIdleTimeout();
+        return LOGIN_TYPE_ADMIN.equals(loginType) ? webIdleTimeout() : appIdleTimeout();
+    }
+
+    private Duration webIdleTimeout() {
+        return configuredMinutes("auth.web.idle-timeout-minutes", properties.webIdleTimeout());
+    }
+
+    private Duration webAbsoluteTimeout() {
+        return configuredHours("auth.web.absolute-timeout-hours", properties.webAbsoluteTimeout());
+    }
+
+    private Duration appIdleTimeout() {
+        return configuredDays("auth.app.idle-timeout-days", properties.appIdleTimeout());
+    }
+
+    private Duration appAbsoluteTimeout() {
+        return configuredDays("auth.app.absolute-timeout-days", properties.appAbsoluteTimeout());
+    }
+
+    private Duration configuredMinutes(String key, Duration fallback) {
+        ConfigProvider provider = configProvider.getIfAvailable();
+        return provider == null ? fallback : provider.get(key)
+                .map(value -> parseDuration(value, fallback, 60))
+                .orElse(fallback);
+    }
+
+    private Duration configuredHours(String key, Duration fallback) {
+        ConfigProvider provider = configProvider.getIfAvailable();
+        return provider == null ? fallback : provider.get(key)
+                .map(value -> parseDuration(value, fallback, 3600))
+                .orElse(fallback);
+    }
+
+    private Duration configuredDays(String key, Duration fallback) {
+        ConfigProvider provider = configProvider.getIfAvailable();
+        return provider == null ? fallback : provider.get(key)
+                .map(value -> parseDuration(value, fallback, 86400))
+                .orElse(fallback);
+    }
+
+    private static Duration parseDuration(String value, Duration fallback, long secondsPerUnit) {
+        try {
+            long units = Long.parseLong(value.trim());
+            return units > 0 ? Duration.ofSeconds(units * secondsPerUnit) : fallback;
+        } catch (NumberFormatException exception) {
+            return fallback;
+        }
     }
 
     private static String indexKey(String loginType, long userId) {

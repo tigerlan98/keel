@@ -46,6 +46,24 @@ const router = createRouter({
           component: () => import('@/views/ResourceTreeView.vue'),
           meta: { title: '资源管理', permission: 'iam:resource:list' },
         },
+        {
+          path: 'system/config',
+          name: 'system-config',
+          component: () => import('@/views/SystemConfigView.vue'),
+          meta: { title: '系统参数', permission: 'sys:config:list' },
+        },
+        {
+          path: 'audit/operation-logs',
+          name: 'operation-logs',
+          component: () => import('@/views/OperationLogView.vue'),
+          meta: { title: '操作日志', permission: 'audit:operation:list' },
+        },
+        {
+          path: 'audit/login-logs',
+          name: 'login-logs',
+          component: () => import('@/views/LoginLogView.vue'),
+          meta: { title: '登录日志', permission: 'audit:login:list' },
+        },
       ],
     },
     {

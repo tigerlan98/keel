@@ -1,5 +1,6 @@
 package io.github.keel.iam.interfaces.admin;
 
+import io.github.keel.common.core.audit.OperationLog;
 import io.github.keel.common.core.result.Result;
 import io.github.keel.common.security.auth.AuthenticatedUser;
 import io.github.keel.common.security.config.SecurityTokenProperties;
@@ -133,6 +134,7 @@ public class AuthController {
     @Operation(operationId = "changePassword", summary = "修改自己的密码", description = "校验旧密码；成功后吊销该用户全部 token，客户端需重新登录。")
     @ApiResponse(responseCode = "204", description = "密码已修改")
     @PostMapping("/change-password")
+    @OperationLog(module = "iam", action = "UPDATE")
     public ResponseEntity<Void> changePassword(@AuthenticationPrincipal AuthenticatedUser principal,
                                                @Valid @RequestBody ChangePasswordRequest request) {
         authApplicationService.changePassword(principal, request.oldPassword(), request.newPassword());

@@ -45,3 +45,12 @@ export type ResourceType = NonNullable<Schemas['ResourceNode']['type']>
 export type ResourceStatus = NonNullable<Schemas['ResourceNode']['status']>
 export type ResourceNode = Schemas['ResourceNode']
 export type ResourceDetail = Schemas['ResourceDetail']
+
+export type ConfigSummary = Schemas['ConfigSummary']
+export type ConfigDetail = Schemas['ConfigDetail']
+
+export type LoginAction = NonNullable<Schemas['LoginLogSummary']['action']>
+export type OperationLogSummary = Schemas['OperationLogSummary']
+export type OperationLogDetail = Schemas['OperationLogDetail']
+export type LoginLogSummary = Schemas['LoginLogSummary']
+export type LoginLogDetail = Schemas['LoginLogDetail']

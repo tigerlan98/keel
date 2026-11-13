@@ -68,6 +68,34 @@ public class OpenApiConfig {
             {"code":"OK","message":"success","data":[{"id":1,"parentId":0,"type":"DIRECTORY","code":"iam:directory","name":"身份与权限","path":"/iam","component":null,"icon":"shield","sort":20,"visible":true,"status":"ENABLED","children":[{"id":2,"parentId":1,"type":"MENU","code":"iam:user:list","name":"用户管理","path":"/iam/users","component":"iam/users/index","icon":"users","sort":201,"visible":true,"status":"ENABLED","children":[]}]}]}
             """;
 
+    private static final String CONFIG_PAGE_EXAMPLE = """
+            {"code":"OK","message":"success","data":{"items":[{"id":1,"configKey":"system.name","configValue":"Keel","configGroup":"SYSTEM","publicFlag":true,"description":"系统名称","updatedAt":"2026-11-12T10:00:00.000","version":0}],"total":1,"page":1,"size":20}}
+            """;
+
+    private static final String CONFIG_DETAIL_EXAMPLE = """
+            {"code":"OK","message":"success","data":{"id":1,"configKey":"system.name","configValue":"Keel","configGroup":"SYSTEM","publicFlag":true,"description":"系统名称","createdAt":"2026-11-01T09:00:00.000","createdBy":0,"updatedAt":"2026-11-12T10:00:00.000","updatedBy":1,"version":0}}
+            """;
+
+    private static final String OPERATION_LOG_PAGE_EXAMPLE = """
+            {"code":"OK","message":"success","data":{"items":[{"id":1,"traceId":"8f3a","userId":1,"username":"admin","module":"system","action":"UPDATE","requestMethod":"PUT","requestUri":"/api/v1/admin/system/configs/1","success":true,"ip":"127.0.0.1","durationMs":12,"createdAt":"2026-11-12T10:00:00.000"}],"total":1,"page":1,"size":20}}
+            """;
+
+    private static final String OPERATION_LOG_DETAIL_EXAMPLE = """
+            {"code":"OK","message":"success","data":{"id":1,"traceId":"8f3a","userId":1,"username":"admin","module":"system","action":"UPDATE","method":"ConfigController#update","requestMethod":"PUT","requestUri":"/api/v1/admin/system/configs/1","requestParams":"[1,{\\"configValue\\":\\"Keel\\",\\"publicFlag\\":true,\\"version\\":0}]","success":true,"ip":"127.0.0.1","userAgent":"Mozilla/5.0","durationMs":12,"createdAt":"2026-11-12T10:00:00.000"}}
+            """;
+
+    private static final String LOGIN_LOG_PAGE_EXAMPLE = """
+            {"code":"OK","message":"success","data":{"items":[{"id":1,"traceId":"8f3a","userId":1,"username":"admin","action":"LOGIN","loginType":"ADMIN","device":"WEB","ip":"127.0.0.1","success":true,"createdAt":"2026-11-12T10:00:00.000"}],"total":1,"page":1,"size":20}}
+            """;
+
+    private static final String LOGIN_LOG_DETAIL_EXAMPLE = """
+            {"code":"OK","message":"success","data":{"id":1,"traceId":"8f3a","userId":1,"username":"admin","action":"LOGIN","loginType":"ADMIN","device":"WEB","ip":"127.0.0.1","userAgent":"Mozilla/5.0","success":true,"createdAt":"2026-11-12T10:00:00.000"}}
+            """;
+
+    private static final String PUBLIC_SITE_CONFIG_EXAMPLE = """
+            {"code":"OK","message":"success","data":{"systemName":"Keel","logoUrl":""}}
+            """;
+
     /**
      * Cookie 与 Bearer 二选一；公开端点通过 {@code @SecurityRequirements} 覆盖为无认证。
      */
@@ -166,6 +194,18 @@ public class OpenApiConfig {
         addExample(openApi, "/api/v1/admin/iam/roles", "200", "rolePage", ROLE_PAGE_EXAMPLE);
         addExample(openApi, "/api/v1/admin/iam/roles/{id}", "200", "roleDetail", ROLE_DETAIL_EXAMPLE);
         addExample(openApi, "/api/v1/admin/iam/resources/tree", "200", "resourceTree", RESOURCE_TREE_EXAMPLE);
+        addExample(openApi, "/api/v1/admin/system/configs", "200", "configPage", CONFIG_PAGE_EXAMPLE);
+        addExample(openApi, "/api/v1/admin/system/configs/{id}", "200", "configDetail", CONFIG_DETAIL_EXAMPLE);
+        addExample(openApi, "/api/v1/admin/audit/operation-logs", "200", "operationLogPage",
+                OPERATION_LOG_PAGE_EXAMPLE);
+        addExample(openApi, "/api/v1/admin/audit/operation-logs/{id}", "200", "operationLogDetail",
+                OPERATION_LOG_DETAIL_EXAMPLE);
+        addExample(openApi, "/api/v1/admin/audit/login-logs", "200", "loginLogPage",
+                LOGIN_LOG_PAGE_EXAMPLE);
+        addExample(openApi, "/api/v1/admin/audit/login-logs/{id}", "200", "loginLogDetail",
+                LOGIN_LOG_DETAIL_EXAMPLE);
+        addExample(openApi, "/api/v1/public/system/config", "200", "publicSiteConfig",
+                PUBLIC_SITE_CONFIG_EXAMPLE);
     }
 
     private static void addExample(OpenAPI openApi, String path, String status, String name, String json) {

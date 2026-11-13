@@ -1,5 +1,6 @@
 package io.github.keel.iam.interfaces.admin;
 
+import io.github.keel.common.core.audit.OperationLog;
 import io.github.keel.common.core.result.Result;
 import io.github.keel.iam.application.authorization.ResourceApplicationService;
 import io.github.keel.iam.application.authorization.ResourceDetailView;
@@ -61,6 +62,7 @@ public class ResourceController {
             description = "type、code、path、component 不可修改；父级只能是根、DIRECTORY 或 MENU，且不能形成环。")
     @PutMapping("/{id}")
     @PreAuthorize("@perm.has('iam:resource:update')")
+    @OperationLog(module = "iam", action = "UPDATE")
     public Result<ResourceDetail> update(@PathVariable long id,
                                          @Valid @RequestBody UpdateResourceRequest request) {
         ResourceDetailView view = resourceApplicationService.update(id, new UpdateResourceCommand(
@@ -77,6 +79,7 @@ public class ResourceController {
             description = "停用目录/菜单前校验启用子资源；状态变更后清理受影响用户权限缓存。")
     @PatchMapping("/{id}/status")
     @PreAuthorize("@perm.has('iam:resource:status')")
+    @OperationLog(module = "iam", action = "STATUS_CHANGE")
     public Result<ResourceDetail> updateStatus(@PathVariable long id,
                                                @Valid @RequestBody UpdateResourceStatusRequest request) {
         return Result.success(toDetail(resourceApplicationService.updateStatus(

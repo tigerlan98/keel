@@ -1,5 +1,6 @@
 package io.github.keel.iam.interfaces.admin;
 
+import io.github.keel.common.core.audit.OperationLog;
 import io.github.keel.common.core.result.PageResult;
 import io.github.keel.common.core.result.Result;
 import io.github.keel.iam.application.authorization.CreateRoleCommand;
@@ -82,6 +83,7 @@ public class RoleController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@perm.has('iam:role:create')")
+    @OperationLog(module = "iam", action = "CREATE")
     public Result<RoleDetail> create(@Valid @RequestBody CreateRoleRequest request) {
         RoleDetailView view = roleApplicationService.create(new CreateRoleCommand(
                 request.code(),
@@ -95,6 +97,7 @@ public class RoleController {
     @Operation(operationId = "updateRole", summary = "更新角色", description = "code 不可修改；SUPER_ADMIN 不允许禁用。状态变更后清理受影响用户权限缓存。")
     @PutMapping("/{id}")
     @PreAuthorize("@perm.has('iam:role:update')")
+    @OperationLog(module = "iam", action = "UPDATE")
     public Result<RoleDetail> update(@PathVariable long id, @Valid @RequestBody UpdateRoleRequest request) {
         RoleDetailView view = roleApplicationService.update(id, new UpdateRoleCommand(
                 request.name(),
@@ -109,6 +112,7 @@ public class RoleController {
     @ApiResponse(responseCode = "204", description = "删除成功")
     @DeleteMapping("/{id}")
     @PreAuthorize("@perm.has('iam:role:delete')")
+    @OperationLog(module = "iam", action = "DELETE")
     public ResponseEntity<Void> delete(@PathVariable long id) {
         roleApplicationService.delete(id);
         return ResponseEntity.noContent().build();
@@ -125,6 +129,7 @@ public class RoleController {
     @ApiResponse(responseCode = "204", description = "授权成功")
     @PutMapping("/{id}/resources")
     @PreAuthorize("@perm.has('iam:role:assign-resource')")
+    @OperationLog(module = "iam", action = "ASSIGN")
     public ResponseEntity<Void> replaceResources(@PathVariable long id,
                                                  @Valid @RequestBody AssignResourcesRequest request) {
         roleApplicationService.replaceResources(id, request.resourceIds());
