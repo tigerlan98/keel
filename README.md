@@ -109,13 +109,16 @@ pnpm build
 
 ## 部署资源
 
-`deploy/` 存放本地依赖服务的 Docker Compose 配置。
+`deploy/` 存放本地依赖服务与同域部署配置。
 
 ```powershell
 cd deploy
-Copy-Item docker-compose.env.example docker-compose.env   # 首次使用，填写真实密码
-docker compose --env-file docker-compose.env up -d
+Copy-Item docker-compose.env.example docker-compose.env   # 首次使用，填写真实密码与初始管理员
+docker compose --env-file docker-compose.env up -d        # 仅 MySQL / Redis
+docker compose --env-file docker-compose.env --profile full up -d --build   # 完整同域栈
 ```
+
+完整栈包含后端、Admin、Portal 与 Nginx，访问 `/admin/`、`/portal/`、`/api/v1`、`/health`。启动前需在 `backend` 执行 `mvn verify` 生成 jar；详见 `deploy/README.md`。
 
 `deploy/docker-compose.env` 已被 `.gitignore` 忽略，禁止提交真实密码。
 
@@ -129,7 +132,7 @@ docker compose --env-file docker-compose.env up -d
 
 ## 当前阶段
 
-Phase 1A / 1B / 2 / 3 已完成；Phase 4 Portal 进行中（公开配置已接入，待同域部署验证）。以下为各阶段交付摘要。
+Phase 1A / 1B / 2 / 3 / 4 已完成；Phase 5 加固与交付进行中。以下为各阶段交付摘要。
 
 Phase 1A 已完成：
 
@@ -192,11 +195,19 @@ Phase 3 系统参数与审计日志已完成：
 - Admin 新增系统参数、操作日志、登录日志页面；OpenAPI 快照与前端类型已同步。
 - Playwright 新增系统参数、操作日志、登录日志 8 个用例，并补充登录锁定 429 提示用例（当前合计 23 个）。
 
-Phase 4 Portal（进行中）：
+Phase 4 Portal 已完成：
 
 - Portal 已接入 `GET /api/v1/public/system/config`，首页展示系统名称与 Logo，并处理加载、失败与重试状态。
 - 匿名客户端，不引入认证逻辑。
-- 待办：同域部署验证；内容信息架构仍保持骨架级。
+- 同域部署已验证：`/admin/`、`/portal/`、`/api/v1/public/system/config` 可访问，匿名访问管理端接口返回 401。
+- 内容信息架构仍保持骨架级。
+
+Phase 5 加固与交付（进行中）：
+
+- 后端 `mvn verify` 通过（39 个测试），Admin Playwright 23 个用例通过。
+- OpenAPI 快照已重新导出，Phase 3 响应 DTO 补齐必填标注，登录 429 已进入契约。
+- 已补充 Dockerfile、Nginx 同域配置、完整 Compose 与三份 `AGENTS.md`。
+- 剩余：`schema.sql` 与 03 的机械核对、发布流程与版本策略、CI 流水线。
 
 契约与 E2E 命令：
 

@@ -55,6 +55,80 @@ services:
     networks:
       - keel
 
+  backend:
+    profiles: ["full"]
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: keel-backend
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-keel}
+      DB_USERNAME: ${MYSQL_USER:-keel}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      KEEL_ADMIN_USERNAME: ${KEEL_ADMIN_USERNAME:?KEEL_ADMIN_USERNAME is required}
+      KEEL_ADMIN_PASSWORD: ${KEEL_ADMIN_PASSWORD:?KEEL_ADMIN_PASSWORD is required}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    networks:
+      - keel
+
+  admin:
+    profiles: ["full"]
+    build:
+      context: ../frontend/admin
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: /admin/
+    container_name: keel-admin
+    restart: unless-stopped
+    networks:
+      - keel
+
+  portal:
+    profiles: ["full"]
+    build:
+      context: ../frontend/portal
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: /portal/
+    container_name: keel-portal
+    restart: unless-stopped
+    networks:
+      - keel
+
+  nginx:
+    profiles: ["full"]
+    image: nginx:1.27-alpine
+    container_name: keel-nginx
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - admin
+      - portal
+    networks:
+      - keel
+
 networks:
   keel:
     name: keel-network
