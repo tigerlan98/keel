@@ -50,7 +50,7 @@ function toggleAll(): void {
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-xl border border-line-soft bg-white/50">
+  <div class="overflow-hidden rounded-xl border border-line-soft bg-[var(--input-surface)]">
     <div class="flex items-center gap-2 border-b border-line-soft p-2">
       <div class="min-w-0 flex-1">
         <AppInput v-model="search" placeholder="搜索角色名称或编码">

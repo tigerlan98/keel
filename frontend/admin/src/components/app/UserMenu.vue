@@ -27,11 +27,11 @@ const roleLabel = computed(() => (props.superAdmin ? '超管' : '管理员'))
     <DropdownMenuTrigger as-child>
       <button
         type="button"
-        class="flex h-9 items-center gap-2 rounded-full border border-white/80 bg-white/65 py-1 pl-1 pr-2.5 text-left shadow-[var(--shadow-e1)] outline-none transition-[background-color,box-shadow] hover:bg-white focus-visible:ring-2 focus-visible:ring-brand/30"
+        class="flex h-10 items-center gap-[9px] rounded-full py-1 pl-1 pr-2.5 text-left outline-none transition-colors hover:bg-ink/5 focus-visible:ring-2 focus-visible:ring-brand/30"
         :aria-label="`用户菜单：${name}`"
       >
         <span
-          class="grid h-7 w-7 place-items-center rounded-full bg-ink text-[11px] font-semibold text-white"
+          class="grid h-8 w-8 place-items-center rounded-full bg-[#bf593b] text-[12px] font-semibold text-white"
         >
           {{ initials }}
         </span>
@@ -49,7 +49,7 @@ const roleLabel = computed(() => (props.superAdmin ? '超管' : '管理员'))
       <DropdownMenuContent
         align="end"
         :side-offset="8"
-        class="z-[80] min-w-[196px] rounded-xl border border-white/80 bg-white/95 p-1.5 shadow-[var(--shadow-e3)] backdrop-blur-xl"
+        class="z-[80] min-w-[196px] rounded-xl border border-line-strong bg-[var(--floating-surface)] p-1.5 shadow-[var(--shadow-e3)] backdrop-blur-xl"
       >
         <div class="px-2.5 py-2">
           <p class="truncate text-[12px] font-semibold text-ink">{{ name }}</p>

@@ -4,7 +4,7 @@ const emit = defineEmits<{ submit: [] }>()
 
 <template>
   <form
-    class="app-surface flex flex-wrap items-end gap-3 rounded-2xl px-5 py-4"
+    class="app-filter-bar app-panel flex flex-wrap items-end gap-x-4 gap-y-3 px-5 py-4"
     @submit.prevent="emit('submit')"
   >
     <div class="flex flex-1 flex-wrap items-end gap-3">

@@ -10,27 +10,32 @@ withDefaults(
 </script>
 
 <template>
-  <div class="flex h-16 items-center gap-2.5 px-4">
+  <div class="flex h-16 shrink-0 items-center gap-[11px] px-[18px]">
     <span
-      class="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-ink text-white shadow-[0_8px_20px_-14px_rgba(12,23,22,0.9)]"
+      class="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-[#131619] text-white shadow-[0_8px_20px_-14px_rgba(12,23,22,0.9)]"
       :title="collapsed ? 'Keel 管理端' : undefined"
     >
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M6.5 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
-        <path d="M7 11.5 19 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
-        <path d="M7 12.5 19 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
-        <circle cx="7" cy="12" r="2" fill="#6AC4B3" />
-      </svg>
+      <span class="brand-dot" aria-hidden="true"></span>
     </span>
     <div v-if="!collapsed" class="min-w-0">
-      <span
-        class="block truncate font-sans text-[12px] font-semibold leading-none tracking-[0.3em] text-ink"
-      >
-        KEEL
+      <span class="block truncate font-sans text-[15px] font-bold leading-none text-ink">
+        Keel 管理后台
       </span>
-      <span class="mt-1.5 block truncate text-[9px] leading-none tracking-[0.12em] text-ink-faint">
+      <span class="mt-1.5 block truncate text-[10px] leading-none tracking-[0.08em] text-ink-soft">
         ADMIN CONSOLE
       </span>
     </div>
   </div>
 </template>
+
+<style scoped>
+.brand-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--brand-bright);
+  box-shadow:
+    0 0 0 4px rgba(130, 221, 45, 0.2),
+    0 0 12px rgba(130, 221, 45, 0.6);
+}
+</style>

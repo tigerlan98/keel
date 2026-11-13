@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, X } from '@lucide/vue'
+import { ChevronRight, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, X } from '@lucide/vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
-import { RouterView, useRoute, useRouter } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 import AppConfirm from '@/components/app/AppConfirm.vue'
+import AppearanceSettings from '@/components/app/AppearanceSettings.vue'
 import AppLogo from '@/components/app/AppLogo.vue'
 import MenuTree from '@/components/app/MenuTree.vue'
+import MenuSearch from '@/components/app/MenuSearch.vue'
 import UserMenu from '@/components/app/UserMenu.vue'
 import { findMenuTrail } from '@/lib/menus'
 import { useAuthStore } from '@/stores/auth'
@@ -99,6 +101,14 @@ onUnmounted(() => {
         <AppLogo :collapsed="collapsed" />
 
         <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-1" aria-label="主菜单">
+          <RouterLink
+            to="/"
+            class="workbench-link"
+            :class="{ 'is-active': route.name === 'home', 'is-compact': collapsed }"
+            :title="collapsed ? '工作台' : undefined"
+          >
+            <LayoutDashboard :size="18" aria-hidden="true" /><span v-if="!collapsed">工作台</span>
+          </RouterLink>
           <MenuTree :menus="auth.menus" :collapsed="collapsed" />
           <p
             v-if="auth.menus.length === 0 && !collapsed"
@@ -152,6 +162,8 @@ onUnmounted(() => {
           </div>
 
           <div class="ml-auto flex items-center gap-2">
+            <MenuSearch @open="mobileOpen = false" />
+            <AppearanceSettings />
             <UserMenu
               :name="displayName"
               :username="auth.user?.username ?? ''"
@@ -166,7 +178,7 @@ onUnmounted(() => {
           <div class="app-main-inner">
             <RouterView v-slot="{ Component, route: currentRoute }">
               <Transition name="page" mode="out-in">
-                <component :is="Component" :key="currentRoute.path" />
+                <div :key="currentRoute.path" class="route-page"><component :is="Component" /></div>
               </Transition>
             </RouterView>
           </div>
@@ -177,12 +189,9 @@ onUnmounted(() => {
     <Teleport to="body">
       <Transition name="drawer">
         <div v-if="mobileOpen" class="fixed inset-0 z-[70]">
-          <div
-            class="absolute inset-0 bg-ink/35 backdrop-blur-sm"
-            @click="mobileOpen = false"
-          ></div>
+          <div class="absolute inset-0 bg-[var(--overlay-bg)]" @click="mobileOpen = false"></div>
           <aside
-            class="drawer-panel absolute inset-y-0 left-0 flex w-[272px] flex-col border-r border-white/70 bg-[rgba(250,252,249,0.96)] shadow-[var(--shadow-e3)] backdrop-blur-xl"
+            class="drawer-panel absolute inset-y-0 left-0 flex w-[272px] flex-col border-r border-line-strong bg-[var(--rail-surface)] shadow-[var(--shadow-e3)] backdrop-blur-xl"
             role="dialog"
             aria-modal="true"
             aria-label="导航菜单"
@@ -200,6 +209,12 @@ onUnmounted(() => {
               </button>
             </div>
             <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-4" aria-label="主菜单">
+              <RouterLink
+                to="/"
+                class="workbench-link"
+                :class="{ 'is-active': route.name === 'home' }"
+                ><LayoutDashboard :size="18" aria-hidden="true" />工作台</RouterLink
+              >
               <MenuTree :menus="auth.menus" />
               <p v-if="auth.menus.length === 0" class="px-3 py-4 text-[11px] text-ink-soft">
                 暂无可见菜单
@@ -229,7 +244,7 @@ onUnmounted(() => {
 .app-frame {
   min-height: 100dvh;
   padding: 8px;
-  background: var(--ink);
+  background: var(--canvas-deep);
 }
 
 .app-shell {
@@ -237,11 +252,15 @@ onUnmounted(() => {
   grid-template-columns: 232px minmax(0, 1fr);
   height: calc(100dvh - 16px);
   overflow: hidden;
-  border-radius: 24px;
+  border: 10px solid #17191d;
+  border-radius: 38px;
   background:
-    radial-gradient(ellipse 52% 46% at 90% 0%, rgba(62, 139, 126, 0.08), transparent 62%),
-    var(--canvas);
-  transition: grid-template-columns 0.28s ease;
+    radial-gradient(55% 45% at 92% 0%, rgba(130, 221, 45, 0.07), transparent 70%),
+    radial-gradient(45% 40% at 20% 100%, rgba(35, 109, 233, 0.055), transparent 70%), var(--canvas);
+  box-shadow:
+    0 24px 70px rgba(17, 23, 27, 0.24),
+    0 3px 12px rgba(17, 23, 27, 0.16);
+  transition: grid-template-columns 0.42s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .app-shell.is-collapsed {
@@ -253,7 +272,7 @@ onUnmounted(() => {
   min-height: 0;
   flex-direction: column;
   border-right: 1px solid var(--line-soft);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(247, 250, 246, 0.68));
+  background: var(--rail-surface);
   backdrop-filter: blur(22px);
 }
 
@@ -270,9 +289,9 @@ onUnmounted(() => {
   flex: none;
   align-items: center;
   gap: 10px;
-  padding: 0 24px;
+  padding: 0 20px 0 14px;
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(246, 249, 245, 0.72);
+  background: var(--topbar-surface);
   backdrop-filter: blur(18px);
 }
 
@@ -280,15 +299,43 @@ onUnmounted(() => {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
-  padding: 24px 28px 34px;
+  padding: 26px 28px 40px;
   scrollbar-width: thin;
   scrollbar-color: rgba(12, 23, 22, 0.18) transparent;
 }
 
 .app-main-inner {
   width: 100%;
-  max-width: 1560px;
   margin: 0 auto;
+}
+
+.workbench-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 38px;
+  padding: 0 11px;
+  margin: 4px 0 8px;
+  border-radius: 12px;
+  color: var(--ink-muted);
+  font-size: 13px;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.workbench-link.is-active {
+  background: var(--pill-surface);
+  box-shadow: var(--shadow-e2), var(--inset-edge);
+  color: var(--brand);
+  font-weight: 650;
+}
+.workbench-link.is-compact {
+  justify-content: center;
+  padding: 0;
+}
+.workbench-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 .topbar-icon-button {
@@ -306,7 +353,7 @@ onUnmounted(() => {
 
 .topbar-icon-button:hover {
   color: var(--ink);
-  background: rgba(12, 23, 22, 0.05);
+  background: var(--hover-surface);
 }
 
 .topbar-icon-button:focus-visible {
@@ -361,7 +408,9 @@ onUnmounted(() => {
   .app-shell.is-collapsed {
     grid-template-columns: minmax(0, 1fr);
     height: 100dvh;
+    border: 0;
     border-radius: 0;
+    box-shadow: none;
   }
 
   .app-rail {

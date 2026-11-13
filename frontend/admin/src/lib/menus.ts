@@ -2,6 +2,7 @@ import {
   Circle,
   FileClock,
   KeyRound,
+  LayoutDashboard,
   LogIn,
   Menu,
   ScrollText,
@@ -15,6 +16,7 @@ import {
 import type { MenuNode } from '@/api/types'
 
 const ICONS: Record<string, LucideIcon> = {
+  'layout-dashboard': LayoutDashboard,
   shield: Shield,
   users: Users,
   'key-round': KeyRound,

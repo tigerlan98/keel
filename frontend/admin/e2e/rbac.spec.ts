@@ -31,13 +31,14 @@ const userMenu = {
 }
 
 test.describe('RBAC 与菜单', () => {
-  test('登录后落在第一个有权限菜单，侧边栏由后端菜单驱动', async ({ page }) => {
+  test('登录后落在工作台，业务侧边栏由后端菜单驱动', async ({ page }) => {
     await mockSessionWithMenus(page, [userMenu], ['iam:user:list'])
     await mockUsers(page)
 
     await page.goto('/')
 
-    await expect(page).toHaveURL('/iam/users')
+    await expect(page).toHaveURL('/')
+    await expect(page.getByRole('heading', { name: /超级管理员/ })).toBeVisible()
     await expect(page.getByRole('link', { name: '用户管理' })).toBeVisible()
     await expect(page.getByRole('link', { name: '角色管理' })).toHaveCount(0)
   })

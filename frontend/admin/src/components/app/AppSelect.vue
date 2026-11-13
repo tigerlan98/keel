@@ -23,7 +23,7 @@ const model = defineModel<string | number>()
 
 const classes = computed(() =>
   cn(
-    'w-full appearance-none rounded-[10px] border border-line-soft bg-white/70 pl-3 pr-9 text-[13px] text-ink outline-none transition-[border-color,box-shadow,background-color] duration-150 hover:border-line-strong focus-visible:border-brand focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-brand/20 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-ink-soft',
+    'w-full appearance-none rounded-[10px] border border-line-soft bg-[var(--input-surface)] pl-3 pr-9 text-[13px] text-ink outline-none transition-[border-color,box-shadow,background-color] duration-150 hover:border-line-strong focus-visible:border-brand focus-visible:bg-[var(--surface-solid)] focus-visible:ring-2 focus-visible:ring-brand/20 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-ink-soft',
     props.size === 'sm' ? 'h-8' : 'h-9',
     props.invalid &&
       'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/15',

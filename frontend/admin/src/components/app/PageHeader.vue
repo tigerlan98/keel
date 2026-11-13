@@ -6,9 +6,9 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex flex-wrap items-start justify-between gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-4">
     <div class="min-w-0 space-y-1.5">
-      <h1 class="text-[26px] font-semibold leading-tight tracking-[-0.03em] text-ink">
+      <h1 class="text-[22px] font-bold leading-tight tracking-[-0.03em] text-ink md:text-[28px]">
         {{ title }}
       </h1>
       <p v-if="description" class="max-w-[68ch] text-[13px] leading-6 text-ink-muted">

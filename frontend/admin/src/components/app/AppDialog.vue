@@ -8,9 +8,11 @@ const props = withDefaults(
     open: boolean
     title: string
     size?: 'sm' | 'md' | 'lg'
+    initialFocusId?: string
   }>(),
   {
     size: 'md',
+    initialFocusId: '',
   },
 )
 
@@ -30,15 +32,25 @@ function handleOpenChange(value: boolean): void {
     emit('close')
   }
 }
+
+function handleOpenAutoFocus(event: InstanceType<typeof globalThis.Event>): void {
+  if (!props.initialFocusId) return
+  const target = globalThis.document.getElementById(props.initialFocusId)
+  if (target) {
+    event.preventDefault()
+    target.focus()
+  }
+}
 </script>
 
 <template>
   <DialogRoot :open="open" @update:open="handleOpenChange">
     <DialogPortal>
-      <DialogOverlay class="dialog-overlay fixed inset-0 z-50 bg-ink/35 backdrop-blur-[3px]" />
+      <DialogOverlay class="dialog-overlay fixed inset-0 z-[100] bg-[var(--overlay-bg)]" />
       <DialogContent
-        class="dialog-content fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[20px] border border-white/80 bg-surface shadow-[var(--shadow-e3)] focus:outline-none"
+        class="dialog-content fixed left-1/2 top-1/2 z-[100] flex max-h-[85dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[20px] border border-line-strong bg-surface text-ink shadow-[var(--shadow-e3)] focus:outline-none"
         :class="sizeClass"
+        @open-auto-focus="handleOpenAutoFocus"
       >
         <header
           class="flex items-center justify-between gap-4 border-b border-line-soft px-5 py-3.5"

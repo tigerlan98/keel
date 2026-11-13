@@ -33,32 +33,50 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Keel Pearl brand & surfaces */
-  --brand: #3e8b7e;
-  --brand-strong: #2f6f64;
-  --brand-bright: #6ac4b3;
-  --brand-soft: rgba(62, 139, 126, 0.12);
-  --brand-ring: rgba(62, 139, 126, 0.22);
-  --success: #2f7d6f;
-  --success-soft: rgba(47, 125, 111, 0.12);
+  /* Pearl Glass：蓝色表示选择，青柠表示状态。 */
+  --brand: #236de9;
+  --brand-strong: #1d61d5;
+  --brand-bright: #82dd2d;
+  --brand-soft: rgba(35, 109, 233, 0.1);
+  --brand-ring: rgba(35, 109, 233, 0.22);
+  --success: #477f1c;
+  --success-soft: rgba(130, 221, 45, 0.14);
   --warning: #a9762e;
   --warning-soft: rgba(169, 118, 46, 0.12);
   --info: #3e6fa8;
   --info-soft: rgba(62, 111, 168, 0.12);
-  --ink: #0c1716;
-  --ink-2: #14231f;
-  --ink-muted: #5f6a66;
-  --ink-soft: #7e8883;
-  --ink-faint: #99a29d;
-  --canvas: #f2f5f1;
-  --canvas-deep: #e7ede6;
-  --surface-solid: #fbfcfa;
-  --surface-edge: rgba(255, 255, 255, 0.82);
-  --line-soft: rgba(12, 23, 22, 0.08);
-  --line-strong: rgba(12, 23, 22, 0.14);
-  --shadow-e1: 0 1px 2px rgba(12, 23, 22, 0.04), 0 10px 30px -24px rgba(12, 23, 22, 0.35);
-  --shadow-e2: 0 2px 6px rgba(12, 23, 22, 0.05), 0 18px 44px -28px rgba(12, 23, 22, 0.38);
-  --shadow-e3: 0 18px 60px -26px rgba(12, 23, 22, 0.4), 0 4px 12px rgba(12, 23, 22, 0.06);
+  --ink: #101418;
+  --ink-2: #17191d;
+  --ink-muted: #596368;
+  --ink-soft: #657176;
+  --ink-faint: #6c777c;
+  --canvas: #f6f8f7;
+  --canvas-deep: #dfe3e2;
+  --surface-solid: #fbfcfc;
+  --surface-edge: rgba(46, 58, 62, 0.11);
+  --line-soft: rgba(46, 58, 62, 0.085);
+  --line-strong: rgba(46, 58, 62, 0.14);
+  --shadow-e1: 0 1px 2px rgba(46, 58, 62, 0.05), 0 5px 14px rgba(46, 58, 62, 0.04);
+  --shadow-e2: 0 1px 3px rgba(46, 58, 62, 0.06), 0 12px 30px rgba(46, 58, 62, 0.055);
+  --shadow-e3: 0 2px 6px rgba(46, 58, 62, 0.07), 0 22px 50px rgba(46, 58, 62, 0.08);
+  --panel-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(249, 252, 251, 0.93));
+  --pill-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.93), rgba(246, 251, 249, 0.62));
+  --glass-edge: rgba(255, 255, 255, 0.88);
+  --inset-edge: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  --rail-surface: rgba(250, 251, 250, 0.92);
+  --topbar-surface: rgba(246, 248, 247, 0.6);
+  --input-surface: rgba(255, 255, 255, 0.78);
+  --floating-surface: rgba(246, 248, 247, 0.96);
+  --hover-surface: rgba(46, 58, 62, 0.045);
+  --groove-surface: rgba(225, 231, 229, 0.5);
+  --hero-surface:
+    radial-gradient(ellipse at 0 0, rgba(130, 221, 45, 0.32), transparent 65%),
+    linear-gradient(145deg, #fbfdf8, #fbfcfc);
+  --action-bg: #101418;
+  --action-ink: #fff;
+  --overlay-bg: rgba(16, 20, 24, 0.25);
+  --bar-surface: linear-gradient(#cbd0d0, #dce0df);
+  --ring-inactive: #dce3dd;
 }
 
 .dark {
@@ -90,31 +108,49 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 
-  --brand: #6ac4b3;
-  --brand-strong: #8adbc9;
-  --brand-bright: #8adbc9;
-  --brand-soft: rgba(106, 196, 179, 0.14);
-  --brand-ring: rgba(106, 196, 179, 0.22);
-  --success: #6ac4b3;
-  --success-soft: rgba(106, 196, 179, 0.14);
+  --brand: #4c8dff;
+  --brand-strong: #8bb5ff;
+  --brand-bright: #82dd2d;
+  --brand-soft: rgba(76, 141, 255, 0.16);
+  --brand-ring: rgba(76, 141, 255, 0.28);
+  --success: #9be35a;
+  --success-soft: rgba(130, 221, 45, 0.16);
   --warning: #d9b36c;
   --warning-soft: rgba(217, 179, 108, 0.14);
   --info: #7fa6d8;
   --info-soft: rgba(127, 166, 216, 0.14);
-  --ink: #f5f4ef;
+  --ink: #eef2f1;
   --ink-2: #e6ece7;
-  --ink-muted: #a7b1ac;
-  --ink-soft: #8a9690;
-  --ink-faint: #6f7a75;
-  --canvas: #0d1513;
-  --canvas-deep: #0a1110;
-  --surface-solid: #121d1a;
+  --ink-muted: #b0babd;
+  --ink-soft: #9aa4a7;
+  --ink-faint: #8d979a;
+  --canvas: #121517;
+  --canvas-deep: #090b0c;
+  --surface-solid: #1b1f21;
   --surface-edge: rgba(245, 244, 239, 0.1);
   --line-soft: rgba(245, 244, 239, 0.1);
   --line-strong: rgba(245, 244, 239, 0.18);
   --shadow-e1: 0 1px 2px rgba(0, 0, 0, 0.2), 0 10px 30px -24px rgba(0, 0, 0, 0.5);
   --shadow-e2: 0 2px 6px rgba(0, 0, 0, 0.24), 0 18px 44px -28px rgba(0, 0, 0, 0.55);
   --shadow-e3: 0 18px 60px -26px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.24);
+  --panel-surface: linear-gradient(145deg, rgba(29, 33, 36, 0.98), rgba(25, 29, 31, 0.96));
+  --pill-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --inset-edge: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --rail-surface: rgba(22, 26, 28, 0.94);
+  --topbar-surface: rgba(22, 26, 28, 0.6);
+  --input-surface: rgba(255, 255, 255, 0.04);
+  --floating-surface: rgba(30, 34, 37, 0.97);
+  --hover-surface: rgba(255, 255, 255, 0.05);
+  --groove-surface: rgba(0, 0, 0, 0.22);
+  --hero-surface:
+    radial-gradient(ellipse at 0 0, rgba(130, 221, 45, 0.12), transparent 65%),
+    linear-gradient(145deg, #1d2420, #1b1f21);
+  --action-bg: #eef2f1;
+  --action-ink: #101418;
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --bar-surface: linear-gradient(#586164, #343d40);
+  --ring-inactive: #394346;
 }
 
 @theme inline {
@@ -163,8 +199,8 @@
   --color-line-strong: var(--line-strong);
 
   --font-sans:
-    'Inter', 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    'SF Pro Display', 'SF Pro Text', 'PingFang SC', -apple-system, BlinkMacSystemFont,
+    'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   --font-mono:
     'JetBrains Mono', 'SFMono-Regular', 'Cascadia Code', Consolas, 'Liberation Mono', monospace;
 
@@ -181,6 +217,8 @@
 
   body {
     @apply bg-background font-sans text-foreground;
+    margin: 0;
+    font-synthesis: none;
   }
 
   ::selection {
@@ -191,30 +229,17 @@
 
 @layer components {
   .app-surface {
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.92) 0%,
-      rgba(255, 255, 255, 0.74) 100%
-    );
-    border: 1px solid var(--surface-edge);
-    box-shadow:
-      var(--shadow-e1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    background: var(--pill-surface);
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--shadow-e1), var(--inset-edge);
     backdrop-filter: blur(18px);
   }
 
   .app-panel {
-    @apply overflow-hidden rounded-2xl;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.94) 0%,
-      rgba(255, 255, 255, 0.8) 100%
-    );
+    @apply overflow-hidden rounded-[20px];
+    background: var(--panel-surface);
     border: 1px solid var(--surface-edge);
-    box-shadow:
-      var(--shadow-e1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(18px);
+    box-shadow: var(--shadow-e1), var(--inset-edge);
   }
 
   .section-label {
@@ -227,8 +252,7 @@
     height: 5px;
     flex: none;
     border-radius: 999px;
-    background: var(--brand);
-    box-shadow: 0 0 0 3px var(--brand-soft);
+    background: var(--brand-bright);
   }
 
   .code-chip {
@@ -247,15 +271,16 @@
   }
 
   .data-table thead th {
-    @apply sticky top-0 z-10 whitespace-nowrap px-4 py-2.5 text-[11px] font-medium tracking-[0.04em] text-ink-soft;
-    background: rgba(247, 250, 246, 0.94);
+    @apply sticky top-0 z-10 whitespace-nowrap px-4 py-3 text-[12px] font-medium text-ink-soft;
+    background: var(--rail-surface);
     border-bottom: 1px solid var(--line-soft);
     backdrop-filter: blur(12px);
   }
 
   .data-table tbody td {
     @apply px-4 py-3 align-middle;
-    border-bottom: 1px solid rgba(12, 23, 22, 0.055);
+    height: 48px;
+    border-bottom: 1px solid var(--line-soft);
   }
 
   .data-table tbody tr:last-child td {
@@ -267,19 +292,19 @@
   }
 
   .data-table tbody tr:hover {
-    background: rgba(62, 139, 126, 0.045);
+    background: var(--hover-surface);
   }
 
   .data-table .col-actions {
     position: sticky;
     right: 0;
     z-index: 5;
-    background: rgba(251, 252, 250, 0.96);
+    background: var(--surface-solid);
     box-shadow: -12px 0 20px -22px rgba(12, 23, 22, 0.45);
   }
 
   .data-table tbody tr:hover .col-actions {
-    background: #f4f8f3;
+    background: var(--surface-solid);
   }
 
   .dialog-overlay[data-state='open'] {
@@ -316,6 +341,62 @@
   }
 }
 
+.user-avatar {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  color: white;
+  background: #bf593b;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.dialog-content form :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  border-radius: 10px;
+  border-color: var(--line-strong);
+  background: var(--input-surface);
+  font-size: 13px;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.dialog-content form :is(input, select, textarea):focus-visible {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-soft);
+  outline: none;
+}
+
+.dialog-content footer button {
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .app-panel form,
+  form.app-panel {
+    gap: 12px;
+  }
+  form.app-panel > div:first-child > div {
+    width: 100%;
+  }
+  .app-filter-bar > div:first-child {
+    flex-basis: 100%;
+  }
+  .app-filter-bar > div:last-child {
+    justify-content: flex-end;
+    width: 100%;
+  }
+  .data-table .col-actions {
+    position: static;
+    box-shadow: none;
+    background: var(--surface-solid);
+  }
+}
+
 @keyframes keel-fade-out {
   from {
     opacity: 1;
@@ -328,22 +409,22 @@
 @keyframes keel-dialog-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -48%) scale(0.97);
+    transform: translateY(12px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes keel-dialog-out {
   from {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateY(0) scale(1);
   }
   to {
     opacity: 0;
-    transform: translate(-50%, -48%) scale(0.98);
+    transform: translateY(8px) scale(0.98);
   }
 }
 

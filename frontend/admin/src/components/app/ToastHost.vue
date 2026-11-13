@@ -41,7 +41,7 @@ const tone = computed(() => {
     <Transition name="toast">
       <div
         v-if="toast.visible"
-        class="fixed right-5 top-5 z-[100] flex w-[min(380px,calc(100vw-2.5rem))] items-start gap-3 rounded-2xl border border-white/80 bg-white/90 p-3.5 shadow-[var(--shadow-e3)] backdrop-blur-xl"
+        class="fixed right-5 top-5 z-[100] flex w-[min(380px,calc(100vw-2.5rem))] items-start gap-3 rounded-2xl border border-line-strong bg-[var(--floating-surface)] p-3.5 shadow-[var(--shadow-e3)] backdrop-blur-xl"
         role="status"
         aria-live="polite"
       >

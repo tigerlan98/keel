@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from '@lucide/vue'
+import AppButton from '@/components/app/AppButton.vue'
+import AppDataTable from '@/components/app/AppDataTable.vue'
+import AppErrorState from '@/components/app/AppErrorState.vue'
+import AppField from '@/components/app/AppField.vue'
+import AppFilterBar from '@/components/app/AppFilterBar.vue'
+import AppInput from '@/components/app/AppInput.vue'
+import AppPagination from '@/components/app/AppPagination.vue'
+import AppPanel from '@/components/app/AppPanel.vue'
+import AppSelect from '@/components/app/AppSelect.vue'
+import AppStatusTag from '@/components/app/AppStatusTag.vue'
+import { onMounted, reactive, ref } from 'vue'
 
 import { ApiError } from '@/api/http'
 import {
@@ -12,12 +23,7 @@ import {
   updateRole,
 } from '@/api/roles'
 import { fetchResourceTree } from '@/api/resources'
-import type {
-  ResourceNode,
-  RoleDetail,
-  RoleStatus,
-  RoleSummary,
-} from '@/api/types'
+import type { ResourceNode, RoleDetail, RoleStatus, RoleSummary } from '@/api/types'
 import AppDialog from '@/components/app/AppDialog.vue'
 import PageHeader from '@/components/app/PageHeader.vue'
 import { useToastStore } from '@/stores/toast'
@@ -35,7 +41,15 @@ const items = ref<RoleSummary[]>([])
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size.value)))
+const columns = [
+  { key: 'code', label: '编码' },
+  { key: 'name', label: '名称' },
+  { key: 'description', label: '描述' },
+  { key: 'status', label: '状态' },
+  { key: 'sort', label: '排序' },
+  { key: 'createdAt', label: '创建时间' },
+  { key: 'actions', label: '操作', align: 'right' as const, sticky: true },
+]
 
 const dialogOpen = ref(false)
 const editing = ref<RoleDetail | null>(null)
@@ -94,23 +108,14 @@ function resetFilters() {
   void load()
 }
 
-function changeSize() {
+function changeSize(value: number) {
+  size.value = value
   page.value = 1
   void load()
 }
-
-function previousPage() {
-  if (page.value > 1) {
-    page.value -= 1
-    void load()
-  }
-}
-
-function nextPage() {
-  if (page.value < totalPages.value) {
-    page.value += 1
-    void load()
-  }
+function changePage(value: number) {
+  page.value = value
+  void load()
 }
 
 function openCreate() {
@@ -253,12 +258,6 @@ function statusText(status: RoleStatus) {
   return status === 'ENABLED' ? '启用' : '禁用'
 }
 
-function statusClass(status: RoleStatus) {
-  return status === 'ENABLED'
-    ? 'bg-emerald-50 text-emerald-700'
-    : 'bg-destructive/10 text-destructive'
-}
-
 function formatDateTime(value: string | null | undefined) {
   return value ? value.replace('T', ' ').slice(0, 19) : '-'
 }
@@ -269,192 +268,141 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageHeader title="角色管理" description="维护角色、启停状态与资源授权。" />
-
-  <div class="mt-6 rounded-xl border bg-card">
-    <form class="flex flex-wrap items-end gap-3 border-b p-4" @submit.prevent="search">
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="role-keyword">关键字</label>
-        <input
+  <PageHeader title="角色管理" description="角色决定用户可见的菜单与可用的操作权限。">
+    <template #actions
+      ><AppButton v-permission="'iam:role:create'" @click="openCreate"
+        ><Plus :size="14" />新增角色</AppButton
+      ></template
+    >
+  </PageHeader>
+  <div class="mt-5 space-y-4">
+    <AppFilterBar @submit="search">
+      <AppField label="关键字" for="role-keyword" class="w-[220px]"
+        ><AppInput
           id="role-keyword"
           v-model="filters.keyword"
-          type="text"
           maxlength="64"
-          placeholder="角色名/编码前缀"
-          class="flex h-9 w-52 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        />
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="role-status">状态</label>
-        <select
-          id="role-status"
-          v-model="filters.status"
-          class="flex h-9 w-32 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        >
-          <option value="">全部</option>
+          placeholder="角色名 / 编码前缀"
+      /></AppField>
+      <AppField label="状态" for="role-status" class="w-[150px]"
+        ><AppSelect id="role-status" v-model="filters.status"
+          ><option value="">全部</option>
           <option value="ENABLED">启用</option>
-          <option value="DISABLED">禁用</option>
-        </select>
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="role-sort">排序</label>
-        <select
-          id="role-sort"
-          v-model="sort"
-          class="flex h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        >
-          <option value="sort,asc">排序 ↑</option>
+          <option value="DISABLED">禁用</option></AppSelect
+        ></AppField
+      >
+      <AppField label="排序" for="role-sort" class="w-[180px]"
+        ><AppSelect id="role-sort" v-model="sort"
+          ><option value="sort,asc">排序 ↑</option>
           <option value="sort,desc">排序 ↓</option>
           <option value="createdAt,desc">创建时间 ↓</option>
-          <option value="code,asc">编码 ↑</option>
-        </select>
-      </div>
-
-      <button
-        type="submit"
-        class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        :disabled="loading"
+          <option value="code,asc">编码 ↑</option></AppSelect
+        ></AppField
       >
-        查询
-      </button>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center justify-center rounded-md border border-input px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
-        :disabled="loading"
-        @click="resetFilters"
+      <template #actions
+        ><AppButton type="submit" :loading="loading">查询</AppButton
+        ><AppButton variant="outline" :disabled="loading" @click="resetFilters"
+          >重置</AppButton
+        ></template
       >
-        重置
-      </button>
-      <button
-        v-permission="'iam:role:create'"
-        type="button"
-        class="ml-auto inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        @click="openCreate"
+    </AppFilterBar>
+    <AppPanel>
+      <template #header
+        ><div class="flex items-center gap-2.5">
+          <span class="section-label">角色列表</span
+          ><span class="text-[11.5px] text-ink-soft">共 {{ total }} 条</span>
+        </div></template
       >
-        新增角色
-      </button>
-    </form>
-
-    <div
-      v-if="error"
-      class="flex items-center justify-between gap-3 border-b bg-destructive/5 px-4 py-3 text-sm text-destructive"
-    >
-      <span>{{ error }}</span>
-      <button type="button" class="shrink-0 underline-offset-4 hover:underline" @click="load">
-        重试
-      </button>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[860px] text-sm">
-        <thead class="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-          <tr>
-            <th class="px-4 py-3 font-medium">编码</th>
-            <th class="px-4 py-3 font-medium">名称</th>
-            <th class="px-4 py-3 font-medium">描述</th>
-            <th class="px-4 py-3 font-medium">状态</th>
-            <th class="px-4 py-3 font-medium">排序</th>
-            <th class="px-4 py-3 font-medium">创建时间</th>
-            <th class="px-4 py-3 text-right font-medium">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="7" class="px-4 py-10 text-center text-muted-foreground">加载中...</td>
-          </tr>
-          <tr v-else-if="items.length === 0">
-            <td colspan="7" class="px-4 py-10 text-center text-muted-foreground">暂无数据</td>
-          </tr>
-          <template v-else>
-            <tr v-for="role in items" :key="role.id" class="border-b last:border-0">
-              <td class="px-4 py-3 font-mono text-xs">{{ role.code }}</td>
-              <td class="px-4 py-3 font-medium">{{ role.name }}</td>
-              <td class="max-w-64 truncate px-4 py-3 text-muted-foreground">
-                {{ role.description || '-' }}
-              </td>
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                  :class="statusClass(role.status)"
-                >
-                  {{ statusText(role.status) }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-muted-foreground">{{ role.sort }}</td>
-              <td class="px-4 py-3 text-muted-foreground">{{ formatDateTime(role.createdAt) }}</td>
-              <td class="px-4 py-3">
-                <div class="flex justify-end gap-3 text-primary">
-                  <button
-                    v-permission="'iam:role:update'"
-                    type="button"
-                    class="hover:underline"
-                    @click="openEdit(role)"
-                  >
-                    编辑
-                  </button>
-                  <button
-                    v-permission="'iam:role:assign-resource'"
-                    type="button"
-                    class="hover:underline"
-                    @click="openAssign(role)"
-                  >
-                    授权
-                  </button>
-                  <button
-                    v-permission="'iam:role:delete'"
-                    type="button"
-                    class="text-destructive hover:underline"
-                    @click="deleteTarget = role"
-                  >
-                    删除
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm">
-      <span class="text-muted-foreground">共 {{ total }} 条</span>
-      <div class="flex items-center gap-2">
-        <label class="flex items-center gap-1 text-muted-foreground">
-          每页
-          <select
-            v-model.number="size"
-            class="h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none"
-            @change="changeSize"
-          >
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-            <option :value="50">50</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          class="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm disabled:opacity-40"
-          :disabled="page <= 1 || loading"
-          @click="previousPage"
+      <template #tools
+        ><AppButton
+          variant="outline"
+          size="icon-sm"
+          :loading="loading"
+          aria-label="刷新"
+          title="刷新"
+          @click="load"
+          ><RefreshCw :size="14" /></AppButton
+      ></template>
+      <AppErrorState v-if="error" :message="error" @retry="load" />
+      <AppDataTable
+        v-else
+        :columns="columns"
+        :rows="items"
+        :loading="loading"
+        :min-width="900"
+        empty-title="暂无角色"
+        empty-description="调整筛选条件，或新增一个角色。"
+      >
+        <template #cell-code="{ row }"
+          ><span class="code-chip">{{ row.code }}</span></template
         >
-          上一页
-        </button>
-        <span class="min-w-16 text-center text-muted-foreground">{{ page }} / {{ totalPages }}</span>
-        <button
-          type="button"
-          class="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm disabled:opacity-40"
-          :disabled="page >= totalPages || loading"
-          @click="nextPage"
+        <template #cell-name="{ row }"
+          ><span class="font-semibold text-ink">{{ row.name }}</span
+          ><span v-if="row.code === 'SUPER_ADMIN'" class="ml-2 text-[11px] text-ink-soft"
+            >内置</span
+          ></template
         >
-          下一页
-        </button>
-      </div>
-    </div>
+        <template #cell-description="{ row }"
+          ><span class="text-ink-muted">{{ row.description || '—' }}</span></template
+        >
+        <template #cell-status="{ row }"
+          ><AppStatusTag
+            :tone="row.status === 'ENABLED' ? 'success' : 'danger'"
+            :label="statusText(row.status)"
+        /></template>
+        <template #cell-createdAt="{ row }"
+          ><span class="tnum text-[12px] text-ink-soft">{{
+            formatDateTime(row.createdAt)
+          }}</span></template
+        >
+        <template #cell-actions="{ row }"
+          ><div class="flex justify-end gap-0.5">
+            <AppButton
+              v-permission="'iam:role:update'"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="编辑"
+              title="编辑"
+              @click="openEdit(row)"
+              ><Pencil :size="14"
+            /></AppButton>
+            <AppButton
+              v-permission="'iam:role:assign-resource'"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="授权"
+              title="授权"
+              @click="openAssign(row)"
+              ><ShieldCheck :size="14"
+            /></AppButton>
+            <AppButton
+              v-permission="'iam:role:delete'"
+              variant="danger-ghost"
+              size="icon-sm"
+              :disabled="row.code === 'SUPER_ADMIN'"
+              aria-label="删除"
+              title="删除"
+              @click="deleteTarget = row"
+              ><Trash2 :size="14"
+            /></AppButton></div
+        ></template>
+      </AppDataTable>
+      <template v-if="!error && total > 0" #footer
+        ><AppPagination
+          :page="page"
+          :page-size="size"
+          :total="total"
+          :loading="loading"
+          @update:page="changePage"
+          @update:page-size="changeSize"
+      /></template>
+    </AppPanel>
   </div>
-
-  <AppDialog :open="dialogOpen" :title="editing ? '编辑角色' : '新增角色'" @close="dialogOpen = false">
+  <AppDialog
+    :open="dialogOpen"
+    :title="editing ? '编辑角色' : '新增角色'"
+    @close="dialogOpen = false"
+  >
     <form id="role-form" class="space-y-4" @submit.prevent="save">
       <div class="space-y-1">
         <label class="text-sm font-medium" for="role-code">编码</label>
@@ -535,11 +483,7 @@ onMounted(() => {
     </template>
   </AppDialog>
 
-  <AppDialog
-    :open="!!deleteTarget"
-    title="删除角色"
-    @close="deleteTarget = null"
-  >
+  <AppDialog :open="!!deleteTarget" title="删除角色" @close="deleteTarget = null">
     <p class="text-sm text-muted-foreground">
       确定删除角色「{{ deleteTarget?.name }}」吗？该操作不可撤销。
     </p>
@@ -585,7 +529,10 @@ onMounted(() => {
         <span class="ml-auto text-xs text-muted-foreground">{{ item.node.type }}</span>
       </label>
     </div>
-    <p v-if="assignError" class="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <p
+      v-if="assignError"
+      class="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+    >
       {{ assignError }}
     </p>
     <template #footer>

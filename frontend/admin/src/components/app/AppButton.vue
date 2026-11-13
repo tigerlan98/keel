@@ -6,15 +6,16 @@ import { computed } from 'vue'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] text-[13px] font-semibold outline-none transition-[background-color,border-color,box-shadow,color,transform] duration-150 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas active:translate-y-px disabled:pointer-events-none disabled:opacity-45',
+  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-semibold outline-none transition-[background-color,border-color,box-shadow,color,transform] duration-150 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas active:translate-y-px disabled:pointer-events-none disabled:opacity-45',
   {
     variants: {
       variant: {
-        primary: 'bg-ink text-white shadow-[0_10px_24px_-18px_rgba(12,23,22,0.8)] hover:bg-ink/90',
+        primary:
+          'bg-[var(--action-bg)] text-[var(--action-ink)] shadow-[var(--shadow-e1)] hover:opacity-90',
         brand:
           'bg-brand text-white shadow-[0_10px_24px_-18px_rgba(62,139,126,0.7)] hover:bg-brand-strong',
         outline:
-          'border border-line-soft bg-white/65 text-ink shadow-[var(--shadow-e1)] hover:border-line-strong hover:bg-white',
+          'border border-line-soft bg-[var(--input-surface)] text-ink shadow-[var(--shadow-e1)] hover:border-line-strong hover:bg-[var(--hover-surface)]',
         ghost: 'text-ink-muted hover:bg-ink/5 hover:text-ink',
         subtle: 'bg-brand/10 text-brand-strong hover:bg-brand/15',
         danger: 'bg-destructive text-white hover:bg-destructive/90',

@@ -14,6 +14,9 @@ test.describe('认证与会话', () => {
 
   test('登录成功后进入首页并提交 WEB 设备', async ({ page }) => {
     await mockCsrf(page)
+    await page.route('**/api/v1/admin/audit/**', (route) =>
+      route.fulfill(ok({ items: [], total: 0, page: 1, size: 100 })),
+    )
     let loginBody: unknown
     await page.route('**/api/v1/admin/auth/login', async (route) => {
       loginBody = route.request().postDataJSON()
@@ -26,7 +29,7 @@ test.describe('认证与会话', () => {
     await page.getByRole('button', { name: '登录' }).click()
 
     await expect(page).toHaveURL('/')
-    await expect(page.getByText('超级管理员')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /超级管理员/ })).toBeVisible()
     expect(loginBody).toMatchObject({ username: 'admin', password: 'secret', device: 'WEB' })
   })
 
@@ -86,7 +89,7 @@ test.describe('认证与会话', () => {
     )
 
     await page.goto('/')
-    await expect(page.getByText('超级管理员')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /超级管理员/ })).toBeVisible()
 
     await page.getByRole('button', { name: '用户菜单：超级管理员' }).click()
     await page.getByRole('menuitem', { name: '退出登录' }).click()

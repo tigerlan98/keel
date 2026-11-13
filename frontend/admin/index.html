@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Keel 管理端</title>
+    <script>
+      try {
+        const mode = localStorage.getItem('keel.appearance.theme')
+        const dark =
+          mode === 'dark' || (mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+      } catch {
+        /* 存储不可用时保留默认主题。 */
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

@@ -527,7 +527,12 @@ onMounted(() => {
         empty-description="调整筛选条件，或新增第一个用户。"
       >
         <template #cell-username="{ row }">
-          <span class="font-semibold text-ink">{{ row.username }}</span>
+          <span class="flex items-center gap-2.5"
+            ><span class="user-avatar" aria-hidden="true">{{
+              row.username.slice(0, 1).toUpperCase()
+            }}</span
+            ><span class="font-semibold text-ink">{{ row.username }}</span></span
+          >
         </template>
 
         <template #cell-nickname="{ row }">
@@ -542,13 +547,13 @@ onMounted(() => {
         </template>
 
         <template #cell-lastLoginAt="{ row }">
-          <span class="tnum font-mono text-[11.5px] text-ink-soft">
+          <span class="tnum text-[12px] text-ink-soft">
             {{ formatDateTime(row.lastLoginAt) }}
           </span>
         </template>
 
         <template #cell-createdAt="{ row }">
-          <span class="tnum font-mono text-[11.5px] text-ink-soft">
+          <span class="tnum text-[12px] text-ink-soft">
             {{ formatDateTime(row.createdAt) }}
           </span>
         </template>

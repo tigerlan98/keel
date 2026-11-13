@@ -117,7 +117,7 @@ function changePageSize(value: string | number | undefined): void {
           class="h-8 min-w-8 rounded-[8px] px-2 text-[12px] font-medium transition-colors"
           :class="
             item === page
-              ? 'bg-ink text-white shadow-[var(--shadow-e1)]'
+              ? 'bg-[var(--action-bg)] text-[var(--action-ink)] shadow-[var(--shadow-e1)]'
               : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
           "
           :aria-current="item === page ? 'page' : undefined"

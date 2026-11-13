@@ -25,8 +25,8 @@ const router = createRouter({
         {
           path: '',
           name: 'home',
-          component: () => import('@/views/HomeView.vue'),
-          meta: { title: '首页' },
+          component: () => import('@/views/WorkbenchView.vue'),
+          meta: { title: '工作台' },
         },
         {
           path: 'iam/users',
@@ -44,7 +44,7 @@ const router = createRouter({
           path: 'iam/resources',
           name: 'resources',
           component: () => import('@/views/ResourceTreeView.vue'),
-          meta: { title: '资源管理', permission: 'iam:resource:list' },
+          meta: { title: '菜单管理', permission: 'iam:resource:list' },
         },
         {
           path: 'system/config',
@@ -114,13 +114,6 @@ router.beforeEach(async (to) => {
 
   if (auth.mustChangePassword && !to.meta.allowPasswordChangeRequired) {
     return { name: 'change-password' }
-  }
-
-  if (to.name === 'home') {
-    const target = firstMenuPath(auth.menus, isRoutableMenuPath)
-    if (target) {
-      return target
-    }
   }
 
   if (to.meta.permission && !auth.hasPermission(String(to.meta.permission))) {
