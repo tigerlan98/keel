@@ -97,11 +97,15 @@ function nextPage() {
 }
 
 async function openDetail(log: OperationLogSummary) {
+  if (log.id === undefined) {
+    return
+  }
+  const id = log.id
   detailOpen.value = true
   detailLoading.value = true
   detail.value = null
   try {
-    detail.value = await fetchOperationLog(log.id)
+    detail.value = await fetchOperationLog(id)
   } catch (caught) {
     toast.show(caught instanceof ApiError ? caught.message : '加载日志详情失败', 'error')
     detailOpen.value = false

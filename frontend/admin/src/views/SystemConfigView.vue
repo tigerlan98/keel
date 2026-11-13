@@ -89,14 +89,17 @@ function nextPage() {
 }
 
 async function openEdit(config: ConfigSummary) {
+  if (config.id === undefined) {
+    return
+  }
   formError.value = ''
   try {
     const detail = await fetchConfig(config.id)
     editing.value = detail
-    form.configValue = detail.configValue
+    form.configValue = detail.configValue ?? ''
     form.description = detail.description ?? ''
     form.publicFlag = detail.publicFlag ?? false
-    form.version = detail.version
+    form.version = detail.version ?? 0
     editOpen.value = true
   } catch (caught) {
     toast.show(caught instanceof ApiError ? caught.message : '加载参数失败', 'error')
@@ -104,9 +107,10 @@ async function openEdit(config: ConfigSummary) {
 }
 
 async function save() {
-  if (!editing.value) {
+  if (!editing.value || editing.value.id === undefined) {
     return
   }
+  const id = editing.value.id
   if (!form.configValue) {
     formError.value = '请输入参数值'
     return
@@ -114,7 +118,7 @@ async function save() {
   saving.value = true
   formError.value = ''
   try {
-    await updateConfig(editing.value.id, {
+    await updateConfig(id, {
       configValue: form.configValue,
       description: form.description.trim() || undefined,
       publicFlag: form.publicFlag,

@@ -28,9 +28,14 @@ export function unauthorized() {
   }
 }
 
-/** 已登录：/auth/me 返回有效会话。 */
-export async function mockSession(page: Page): Promise<void> {
-  await page.route('**/api/v1/admin/auth/me', (route) => route.fulfill(ok(session)))
+/** 已登录：/auth/me 返回有效会话；可通过 overrides 覆盖权限、菜单等字段。 */
+export async function mockSession(
+  page: Page,
+  overrides: Partial<typeof session> = {},
+): Promise<void> {
+  await page.route('**/api/v1/admin/auth/me', (route) =>
+    route.fulfill(ok({ ...session, ...overrides })),
+  )
 }
 
 /** 未登录：/auth/me 返回 401。 */

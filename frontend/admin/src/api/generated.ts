@@ -4,6 +4,27 @@
  */
 
 export interface paths {
+    "/api/v1/admin/system/configs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 系统参数详情 */
+        get: operations["getConfig"];
+        /**
+         * 更新系统参数值
+         * @description configKey 不可修改；公开参数仅允许 system.*；更新后立即清理参数缓存。
+         */
+        put: operations["updateConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/iam/users/{id}": {
         parameters: {
             query?: never;
@@ -284,6 +305,26 @@ export interface paths {
         patch: operations["updateResourceStatus"];
         trace?: never;
     };
+    "/api/v1/admin/system/configs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 系统参数分页查询
+         * @description 支持分组、key 前缀筛选与白名单排序。
+         */
+        get: operations["listConfigs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/iam/resources/tree": {
         parameters: {
             query?: never;
@@ -344,6 +385,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/audit/operation-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 操作日志分页查询
+         * @description 仅支持按写入时间排序。
+         */
+        get: operations["listOperationLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit/operation-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 操作日志详情 */
+        get: operations["getOperationLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit/login-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 登录日志分页查询
+         * @description 仅支持按写入时间排序。
+         */
+        get: operations["listLoginLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit/login-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 登录日志详情 */
+        get: operations["getLoginLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/iam/users/{id}/sessions": {
         parameters: {
             query?: never;
@@ -385,6 +500,37 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        UpdateConfigRequest: {
+            configValue: string;
+            description?: string;
+            publicFlag: boolean;
+            /** Format: int32 */
+            version: number;
+        };
+        ConfigDetail: {
+            /** Format: int64 */
+            id?: number;
+            configKey?: string;
+            configValue?: string;
+            configGroup?: string;
+            publicFlag?: boolean;
+            description?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int64 */
+            createdBy?: number;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int64 */
+            updatedBy?: number;
+            /** Format: int32 */
+            version?: number;
+        };
+        ResultConfigDetail: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["ConfigDetail"];
+        };
         UpdateUserRequest: {
             nickname: string;
             /** Format: email */
@@ -585,6 +731,33 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        ConfigSummary: {
+            /** Format: int64 */
+            id?: number;
+            configKey?: string;
+            configValue?: string;
+            configGroup?: string;
+            publicFlag?: boolean;
+            description?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int32 */
+            version?: number;
+        };
+        PageResultConfigSummary: {
+            items?: components["schemas"]["ConfigSummary"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int64 */
+            page?: number;
+            /** Format: int64 */
+            size?: number;
+        };
+        ResultPageResultConfigSummary: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["PageResultConfigSummary"];
+        };
         PageResultUserSummary: {
             items?: components["schemas"]["UserSummary"][];
             /** Format: int64 */
@@ -698,6 +871,117 @@ export interface components {
             message?: string;
             data?: components["schemas"]["CsrfResponse"];
         };
+        OperationLogSummary: {
+            /** Format: int64 */
+            id?: number;
+            traceId?: string;
+            /** Format: int64 */
+            userId?: number;
+            username?: string;
+            module?: string;
+            action?: string;
+            requestMethod?: string;
+            requestUri?: string;
+            success?: boolean;
+            ip?: string;
+            /** Format: int32 */
+            durationMs?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        PageResultOperationLogSummary: {
+            items?: components["schemas"]["OperationLogSummary"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int64 */
+            page?: number;
+            /** Format: int64 */
+            size?: number;
+        };
+        ResultPageResultOperationLogSummary: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["PageResultOperationLogSummary"];
+        };
+        OperationLogDetail: {
+            /** Format: int64 */
+            id?: number;
+            traceId?: string;
+            /** Format: int64 */
+            userId?: number;
+            username?: string;
+            module?: string;
+            action?: string;
+            method?: string;
+            requestMethod?: string;
+            requestUri?: string;
+            requestParams?: string;
+            success?: boolean;
+            errorMessage?: string;
+            ip?: string;
+            userAgent?: string;
+            /** Format: int32 */
+            durationMs?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ResultOperationLogDetail: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["OperationLogDetail"];
+        };
+        LoginLogSummary: {
+            /** Format: int64 */
+            id?: number;
+            traceId?: string;
+            /** Format: int64 */
+            userId?: number;
+            username?: string;
+            action?: string;
+            loginType?: string;
+            device?: string;
+            ip?: string;
+            success?: boolean;
+            failureReason?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        PageResultLoginLogSummary: {
+            items?: components["schemas"]["LoginLogSummary"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int64 */
+            page?: number;
+            /** Format: int64 */
+            size?: number;
+        };
+        ResultPageResultLoginLogSummary: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["PageResultLoginLogSummary"];
+        };
+        LoginLogDetail: {
+            /** Format: int64 */
+            id?: number;
+            traceId?: string;
+            /** Format: int64 */
+            userId?: number;
+            username?: string;
+            action?: string;
+            loginType?: string;
+            device?: string;
+            ip?: string;
+            userAgent?: string;
+            success?: boolean;
+            failureReason?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ResultLoginLogDetail: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["LoginLogDetail"];
+        };
         FieldError: {
             field: string;
             message: string;
@@ -718,6 +1002,54 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultConfigDetail"];
+                };
+            };
+        };
+    };
+    updateConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConfigRequest"];
+            };
+        };
+        responses: {
+            /** @description 更新成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultConfigDetail"];
+                };
+            };
+        };
+    };
     getUser: {
         parameters: {
             query?: never;
@@ -1233,6 +1565,37 @@ export interface operations {
             };
         };
     };
+    listConfigs: {
+        parameters: {
+            query?: {
+                /** @description 页码，从 1 开始 */
+                page?: number;
+                /** @description 每页条数，最大 100 */
+                size?: number;
+                /** @description 排序，格式 field,asc|desc；字段白名单：configKey、updatedAt */
+                sort?: string;
+                /** @description 参数分组 */
+                group?: string;
+                /** @description 参数 key 前缀 */
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultPageResultConfigSummary"];
+                };
+            };
+        };
+    };
     getResourceTree: {
         parameters: {
             query?: {
@@ -1294,6 +1657,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultCsrfResponse"];
+                };
+            };
+        };
+    };
+    listOperationLogs: {
+        parameters: {
+            query?: {
+                /** @description 页码，从 1 开始 */
+                page?: number;
+                /** @description 每页条数，最大 100 */
+                size?: number;
+                /** @description 排序，仅支持 createdAt */
+                sort?: string;
+                /** @description 开始时间，本地 ISO 时间 */
+                startTime?: string;
+                /** @description 结束时间，本地 ISO 时间 */
+                endTime?: string;
+                /** @description 操作人 ID */
+                userId?: number;
+                /** @description 操作人用户名前缀 */
+                username?: string;
+                /** @description 模块编码 */
+                module?: string;
+                /** @description 动作编码 */
+                action?: string;
+                /** @description 是否成功 */
+                success?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultPageResultOperationLogSummary"];
+                };
+            };
+        };
+    };
+    getOperationLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultOperationLogDetail"];
+                };
+            };
+        };
+    };
+    listLoginLogs: {
+        parameters: {
+            query?: {
+                /** @description 页码，从 1 开始 */
+                page?: number;
+                /** @description 每页条数，最大 100 */
+                size?: number;
+                /** @description 排序，仅支持 createdAt */
+                sort?: string;
+                /** @description 开始时间，本地 ISO 时间 */
+                startTime?: string;
+                /** @description 结束时间，本地 ISO 时间 */
+                endTime?: string;
+                /** @description 用户 ID */
+                userId?: number;
+                /** @description 登录名前缀 */
+                username?: string;
+                /** @description 动作：LOGIN / LOGOUT / LOGIN_FAILED */
+                action?: "LOGIN" | "LOGOUT" | "LOGIN_FAILED";
+                /** @description 是否成功 */
+                success?: boolean;
+                /** @description 来源 IP */
+                ip?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultPageResultLoginLogSummary"];
+                };
+            };
+        };
+    };
+    getLoginLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultLoginLogDetail"];
                 };
             };
         };

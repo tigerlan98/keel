@@ -19,7 +19,7 @@ import { ArrowRight } from '@lucide/vue'
           Portal 骨架已就绪。公开配置接口、首页内容与信息架构将在 Phase 4 按设计文档接入。
         </p>
         <a
-          href="/api/v1/public/config"
+          href="/api/v1/public/system/config"
           class="inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
         >
           查看公开配置接口占位

@@ -103,7 +103,7 @@ pnpm build
 
 两个工程均启用 TypeScript strict、ESLint、Prettier 与 `vue-tsc`。开发服务器将 `/api` 代理到 `http://localhost:8080`。
 
-当前前端状态：Admin 已接入登录、`/auth/me` 会话恢复、路由守卫、401 跳转与用户列表（筛选、排序、分页、加载/空/失败状态）；Portal 仍为首页骨架。尚未生成 shadcn-vue 业务组件，也尚未接入 OpenAPI 类型。
+当前前端状态：Admin 已接入登录、`/auth/me` 会话恢复、路由守卫、401/403、菜单驱动侧边栏与按钮权限，并完成用户、角色、资源、系统参数、操作日志、登录日志页面；API 类型由 OpenAPI 快照生成。Portal 仍为首页骨架，尚未接入公开配置接口。
 
 ## 部署资源
 
@@ -127,6 +127,8 @@ docker compose --env-file docker-compose.env up -d
 
 ## 当前阶段
 
+Phase 1A / 1B / 2 / 3 已完成（2026-11-13），下一步 Phase 4 Portal。以下为各阶段交付摘要。
+
 Phase 1A 已完成：
 
 - 9 个 Flyway 迁移（`iam` 5 个、`system` 1 个、核心种子 3 个）在空库上按序执行。
@@ -145,11 +147,14 @@ Phase 1A 已完成：
 - `GET /api/v1/admin/auth/me`
 - `POST /api/v1/admin/auth/change-password`
 
-管理接口（Phase 1B / 2）：
+管理接口（Phase 1B / 2 / 3）：
 
 - 用户：分页、详情、创建、编辑、启停、重置密码、查询/替换角色、按用户或设备强制下线
 - 角色：分页、详情、创建、编辑、删除、查询/替换资源授权
 - 资源：树、详情、更新展示属性、启停；资源的创建/删除仅由 Flyway 迁移维护
+- 系统参数：分页、详情、更新参数值；参数创建/删除仅由 Flyway 迁移维护
+- 操作日志 / 登录日志：分页与详情，只读
+- 公开接口：`GET /api/v1/public/system/config`，仅返回 `public_flag = 1` 且属于 `system.*` 的参数
 
 登录行为同步写入 `aud_login_log`，记录 `LOGIN`、`LOGOUT`、`LOGIN_FAILED`。
 
@@ -173,6 +178,16 @@ Phase 2 RBAC 已完成：
 - 用户禁用、重置密码与强制下线会立即吊销 token；`mustChangePassword` 由服务端强制拦截，仅允许改密、登出、`/me` 与 CSRF。
 - Admin 侧边栏由后端菜单驱动，登录落在第一个有权限菜单；新增角色、资源、用户页面与 `v-permission` 按钮权限；403 只提示不退出登录。
 - Playwright 覆盖菜单可见性、403、角色创建、资源停用冲突与强制改密，共 14 个用例。
+
+Phase 3 系统参数与审计日志已完成：
+
+- 系统参数查询/更新与公开配置接口可用；参数读取走 Redis 缓存（TTL 30 分钟，更新后立即失效）。
+- `ConfigProvider` 已接入 token 超时与审计日志保留期等运行参数。
+- 操作日志通过 `@OperationLog` 切面在接口成功后发布事件并异步落库；请求参数脱敏并截断 2 KB，事务回滚不产生日志。
+- 登录日志保持同步写入，记录 `LOGIN`、`LOGOUT`、`LOGIN_FAILED` 与失败原因。
+- 操作日志与登录日志支持分页/详情查询；每日 02:00 按保留期分批清理（单批 1000 条），默认操作日志 180 天、登录日志 365 天，可通过系统参数调整。
+- Admin 新增系统参数、操作日志、登录日志页面；OpenAPI 快照与前端类型已同步。
+- Playwright 新增系统参数、操作日志、登录日志 8 个用例（合计 22 个）。
 
 契约与 E2E 命令：
 

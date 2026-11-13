@@ -3,20 +3,21 @@ import { computed, onMounted, reactive, ref } from 'vue'
 
 import { ApiError } from '@/api/http'
 import { fetchLoginLog, fetchLoginLogs } from '@/api/logs'
-import type { LoginAction, LoginLogDetail, LoginLogSummary } from '@/api/types'
+import type { LoginLogDetail, LoginLogSummary } from '@/api/types'
 import AppDialog from '@/components/app/AppDialog.vue'
 import PageHeader from '@/components/app/PageHeader.vue'
 import { useToastStore } from '@/stores/toast'
 
 const toast = useToastStore()
 
-const ACTIONS: LoginAction[] = ['LOGIN', 'LOGOUT', 'LOGIN_FAILED']
+const ACTIONS = ['LOGIN', 'LOGOUT', 'LOGIN_FAILED'] as const
+type LoginActionFilter = (typeof ACTIONS)[number]
 
 const filters = reactive({
   startTime: '',
   endTime: '',
   username: '',
-  action: '' as '' | LoginAction,
+  action: '' as '' | LoginActionFilter,
   success: '',
   ip: '',
 })
@@ -96,11 +97,15 @@ function nextPage() {
 }
 
 async function openDetail(log: LoginLogSummary) {
+  if (log.id === undefined) {
+    return
+  }
+  const id = log.id
   detailOpen.value = true
   detailLoading.value = true
   detail.value = null
   try {
-    detail.value = await fetchLoginLog(log.id)
+    detail.value = await fetchLoginLog(id)
   } catch (caught) {
     toast.show(caught instanceof ApiError ? caught.message : '加载日志详情失败', 'error')
     detailOpen.value = false
