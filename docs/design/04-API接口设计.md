@@ -121,6 +121,8 @@
 5. 写入登录日志。
 6. 返回用户、权限码与菜单树。
 
+> 失败锁定：按“用户名 + 来源 IP”计数，Redis 键为 `auth:login-fail:{username}:{ip}`；连续失败达到 `auth.max-login-failures`（默认 5）后锁定 `auth.lock-minutes`（默认 15）分钟，成功登录清零。不存在的用户名同样计数，避免通过锁定行为判断账号是否存在。
+
 ### 2.2 登录（App / 小程序）
 
 1. 直接提交 `POST /api/v1/admin/auth/login`，`device = APP | MINI`。
@@ -256,7 +258,7 @@
 - `AUTH_TOO_MANY_ATTEMPTS` 429：连续失败锁定。
 - `AUTH_CSRF_INVALID` 403：Web 请求 CSRF 校验失败。
 
-登录成功、失败、登出均写入登录日志；失败记录 `failureReason`。
+登录成功、失败、登出均写入登录日志；失败记录 `failureReason`（`BAD_CREDENTIALS`、`DISABLED`、`TOO_MANY_ATTEMPTS`）。
 
 ### 4.2 `POST /api/v1/admin/auth/logout`
 

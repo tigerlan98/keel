@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -63,11 +64,15 @@ class AuthenticationIntegrationTest extends IntegrationTestSupport {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private StringRedisTemplate redis;
+
     private String baseUrl;
 
     @BeforeEach
     void setUp() {
         baseUrl = "http://localhost:" + environment.getProperty("local.server.port");
+        clearLoginAttempts();
         createSuperAdminUser();
     }
 
@@ -146,6 +151,46 @@ class AuthenticationIntegrationTest extends IntegrationTestSupport {
         assertThat(loginLogCount("LOGIN_FAILED", "BAD_CREDENTIALS")).isGreaterThanOrEqualTo(1);
     }
 
+    @Test
+    void repeatedFailuresLockLoginByUsernameAndIp() throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            HttpResponse<String> response = postJson(client, LOGIN_PATH, loginBody("APP", "wrong"), null);
+            assertThat(response.statusCode()).as("attempt %s", attempt).isEqualTo(401);
+        }
+
+        HttpResponse<String> locked = postJson(client, LOGIN_PATH, loginBody("APP"), null);
+        assertThat(locked.statusCode()).isEqualTo(429);
+        assertThat(locked.body()).contains("AUTH_TOO_MANY_ATTEMPTS");
+        assertThat(loginLogCount("LOGIN_FAILED", "TOO_MANY_ATTEMPTS")).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void successfulLoginResetsFailureCounter() throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+
+        for (int attempt = 1; attempt <= 4; attempt++) {
+            assertThat(postJson(client, LOGIN_PATH, loginBody("APP", "wrong"), null).statusCode())
+                    .isEqualTo(401);
+        }
+        assertThat(postJson(client, LOGIN_PATH, loginBody("APP"), null).statusCode()).isEqualTo(200);
+
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            assertThat(postJson(client, LOGIN_PATH, loginBody("APP", "wrong"), null).statusCode())
+                    .as("post-reset attempt %s", attempt)
+                    .isEqualTo(401);
+        }
+        assertThat(postJson(client, LOGIN_PATH, loginBody("APP"), null).statusCode()).isEqualTo(429);
+    }
+
+    private void clearLoginAttempts() {
+        var keys = redis.keys("auth:login-fail:*");
+        if (keys != null && !keys.isEmpty()) {
+            redis.delete(keys);
+        }
+    }
+
     private void createSuperAdminUser() {
         IamUserPO existing = userMapper.selectOne(Wrappers.<IamUserPO>lambdaQuery()
                 .eq(IamUserPO::getUsername, USERNAME));
@@ -172,7 +217,11 @@ class AuthenticationIntegrationTest extends IntegrationTestSupport {
     }
 
     private String loginBody(String device) {
-        return "{\"username\":\"" + USERNAME + "\",\"password\":\"" + PASSWORD
+        return loginBody(device, PASSWORD);
+    }
+
+    private String loginBody(String device, String password) {
+        return "{\"username\":\"" + USERNAME + "\",\"password\":\"" + password
                 + "\",\"device\":\"" + device + "\"}";
     }
 

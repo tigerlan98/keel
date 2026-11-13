@@ -6,6 +6,7 @@ import io.github.keel.common.core.event.LoginLogEvent;
 import io.github.keel.common.core.exception.BusinessException;
 import io.github.keel.common.security.auth.AuthenticatedUser;
 import io.github.keel.common.security.error.AuthErrorCode;
+import io.github.keel.common.security.login.LoginAttemptLimiter;
 import io.github.keel.common.security.token.IssuedToken;
 import io.github.keel.common.security.token.TokenService;
 import io.github.keel.common.security.token.TokenSession;
@@ -34,24 +35,35 @@ public class AuthApplicationService {
     private final AuthorizationCacheEvictor authorizationCacheEvictor;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
     private final ApplicationEventPublisher eventPublisher;
 
     public AuthSession login(LoginCommand command) {
+        if (loginAttemptLimiter.isLocked(command.username(), command.ip())) {
+            publishLoginLog(null, command.username(), command, LoginAction.LOGIN_FAILED, false, "TOO_MANY_ATTEMPTS");
+            throw new BusinessException(AuthErrorCode.AUTH_TOO_MANY_ATTEMPTS);
+        }
+
         IamUserPO user = userMapper.selectOne(Wrappers.<IamUserPO>lambdaQuery()
                 .eq(IamUserPO::getUsername, command.username()));
 
         if (user == null) {
+            loginAttemptLimiter.recordFailure(command.username(), command.ip());
             publishLoginLog(null, command.username(), command, LoginAction.LOGIN_FAILED, false, "BAD_CREDENTIALS");
             throw new BusinessException(AuthErrorCode.AUTH_BAD_CREDENTIALS);
         }
         if (!STATUS_ENABLED.equals(user.getStatus())) {
+            loginAttemptLimiter.recordFailure(command.username(), command.ip());
             publishLoginLog(user.getId(), user.getUsername(), command, LoginAction.LOGIN_FAILED, false, "DISABLED");
             throw new BusinessException(AuthErrorCode.AUTH_BAD_CREDENTIALS);
         }
         if (!passwordEncoder.matches(command.password(), user.getPasswordHash())) {
+            loginAttemptLimiter.recordFailure(command.username(), command.ip());
             publishLoginLog(user.getId(), user.getUsername(), command, LoginAction.LOGIN_FAILED, false, "BAD_CREDENTIALS");
             throw new BusinessException(AuthErrorCode.AUTH_BAD_CREDENTIALS);
         }
+
+        loginAttemptLimiter.reset(command.username(), command.ip());
 
         boolean superAdmin = userMapper.countSuperAdminRole(user.getId()) > 0;
         IssuedToken issuedToken = tokenService.issue(

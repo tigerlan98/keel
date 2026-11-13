@@ -54,6 +54,30 @@ test.describe('认证与会话', () => {
     await expect(page.getByRole('button', { name: '登录' })).toBeEnabled()
   })
 
+  test('登录锁定时展示 429 提示并停留在登录页', async ({ page }) => {
+    await mockCsrf(page)
+    await page.route('**/api/v1/admin/auth/login', (route) =>
+      route.fulfill({
+        status: 429,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 'AUTH_TOO_MANY_ATTEMPTS',
+          message: '登录失败次数过多，请稍后再试',
+          data: null,
+        }),
+      }),
+    )
+
+    await page.goto('/login')
+    await page.getByLabel('用户名').fill('admin')
+    await page.getByLabel('密码').fill('wrong')
+    await page.getByRole('button', { name: '登录' }).click()
+
+    await expect(page.getByText('登录失败次数过多，请稍后再试')).toBeVisible()
+    await expect(page).toHaveURL('/login')
+    await expect(page.getByRole('button', { name: '登录' })).toBeEnabled()
+  })
+
   test('退出登录后返回登录页', async ({ page }) => {
     await mockSession(page)
     await mockCsrf(page)
