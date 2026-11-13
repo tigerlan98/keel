@@ -207,7 +207,8 @@ Phase 5 加固与交付（进行中）：
 - 后端 `mvn verify` 通过（39 个测试），Admin Playwright 23 个用例通过。
 - OpenAPI 快照已重新导出，Phase 3 响应 DTO 补齐必填标注，登录 429 已进入契约。
 - 已补充 Dockerfile、Nginx 同域配置、完整 Compose 与三份 `AGENTS.md`。
-- 剩余：`schema.sql` 与 03 的机械核对、发布流程与版本策略、CI 流水线。
+- `schema.sql` 与 03 的 8 张表结构核对一致；新增 `scripts/verify.ps1` 全量验证入口。
+- 剩余：发布流程与版本策略、CI 平台绑定、Portal 测试与内容决策。
 
 契约与 E2E 命令：
 
