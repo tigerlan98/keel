@@ -502,29 +502,29 @@ export interface components {
     schemas: {
         UpdateConfigRequest: {
             configValue: string;
-            description?: string;
+            description?: string | null;
             publicFlag: boolean;
             /** Format: int32 */
             version: number;
         };
         ConfigDetail: {
             /** Format: int64 */
-            id?: number;
-            configKey?: string;
-            configValue?: string;
-            configGroup?: string;
-            publicFlag?: boolean;
+            id: number;
+            configKey: string;
+            configValue: string;
+            configGroup: string;
+            publicFlag: boolean;
             description?: string;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
             /** Format: int64 */
-            createdBy?: number;
+            createdBy: number;
             /** Format: date-time */
-            updatedAt?: string;
+            updatedAt: string;
             /** Format: int64 */
-            updatedBy?: number;
+            updatedBy: number;
             /** Format: int32 */
-            version?: number;
+            version: number;
         };
         ResultConfigDetail: {
             code?: string;
@@ -733,16 +733,16 @@ export interface components {
         };
         ConfigSummary: {
             /** Format: int64 */
-            id?: number;
-            configKey?: string;
-            configValue?: string;
-            configGroup?: string;
-            publicFlag?: boolean;
+            id: number;
+            configKey: string;
+            configValue: string;
+            configGroup: string;
+            publicFlag: boolean;
             description?: string;
             /** Format: date-time */
-            updatedAt?: string;
+            updatedAt: string;
             /** Format: int32 */
-            version?: number;
+            version: number;
         };
         PageResultConfigSummary: {
             items?: components["schemas"]["ConfigSummary"][];
@@ -873,21 +873,21 @@ export interface components {
         };
         OperationLogSummary: {
             /** Format: int64 */
-            id?: number;
+            id: number;
             traceId?: string;
             /** Format: int64 */
             userId?: number;
             username?: string;
-            module?: string;
-            action?: string;
+            module: string;
+            action: string;
             requestMethod?: string;
             requestUri?: string;
-            success?: boolean;
+            success: boolean;
             ip?: string;
             /** Format: int32 */
             durationMs?: number;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
         };
         PageResultOperationLogSummary: {
             items?: components["schemas"]["OperationLogSummary"][];
@@ -905,25 +905,25 @@ export interface components {
         };
         OperationLogDetail: {
             /** Format: int64 */
-            id?: number;
+            id: number;
             traceId?: string;
             /** Format: int64 */
             userId?: number;
             username?: string;
-            module?: string;
-            action?: string;
+            module: string;
+            action: string;
             method?: string;
             requestMethod?: string;
             requestUri?: string;
             requestParams?: string;
-            success?: boolean;
+            success: boolean;
             errorMessage?: string;
             ip?: string;
             userAgent?: string;
             /** Format: int32 */
             durationMs?: number;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
         };
         ResultOperationLogDetail: {
             code?: string;
@@ -932,19 +932,19 @@ export interface components {
         };
         LoginLogSummary: {
             /** Format: int64 */
-            id?: number;
+            id: number;
             traceId?: string;
             /** Format: int64 */
             userId?: number;
-            username?: string;
-            action?: string;
-            loginType?: string;
-            device?: string;
+            username: string;
+            action: string;
+            loginType: string;
+            device: string;
             ip?: string;
-            success?: boolean;
+            success: boolean;
             failureReason?: string;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
         };
         PageResultLoginLogSummary: {
             items?: components["schemas"]["LoginLogSummary"][];
@@ -962,20 +962,20 @@ export interface components {
         };
         LoginLogDetail: {
             /** Format: int64 */
-            id?: number;
+            id: number;
             traceId?: string;
             /** Format: int64 */
             userId?: number;
-            username?: string;
-            action?: string;
-            loginType?: string;
-            device?: string;
+            username: string;
+            action: string;
+            loginType: string;
+            device: string;
             ip?: string;
             userAgent?: string;
-            success?: boolean;
+            success: boolean;
             failureReason?: string;
             /** Format: date-time */
-            createdAt?: string;
+            createdAt: string;
         };
         ResultLoginLogDetail: {
             code?: string;
@@ -1482,6 +1482,15 @@ export interface operations {
             };
             /** @description 用户名或密码错误 */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 登录失败次数过多，暂时锁定 */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

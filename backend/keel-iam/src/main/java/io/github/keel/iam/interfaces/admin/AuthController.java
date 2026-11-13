@@ -59,7 +59,8 @@ public class AuthController {
     @SecurityRequirements
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "登录成功"),
-            @ApiResponse(responseCode = "401", description = "用户名或密码错误")
+            @ApiResponse(responseCode = "401", description = "用户名或密码错误"),
+            @ApiResponse(responseCode = "429", description = "登录失败次数过多，暂时锁定")
     })
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request,

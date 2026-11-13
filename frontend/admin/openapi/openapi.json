@@ -6,7 +6,7 @@
     "version" : "v1"
   },
   "servers" : [ {
-    "url" : "http://localhost:37602",
+    "url" : "http://localhost:57140",
     "description" : "Generated server url"
   } ],
   "security" : [ {
@@ -915,6 +915,16 @@
                 }
               }
             }
+          },
+          "429" : {
+            "description" : "登录失败次数过多，暂时锁定",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "security" : [ ]
@@ -1717,7 +1727,7 @@
             "minLength" : 0
           },
           "description" : {
-            "type" : "string",
+            "type" : [ "string", "null" ],
             "maxLength" : 255,
             "minLength" : 0
           },
@@ -1773,7 +1783,8 @@
             "type" : "integer",
             "format" : "int32"
           }
-        }
+        },
+        "required" : [ "configGroup", "configKey", "configValue", "createdAt", "createdBy", "id", "publicFlag", "updatedAt", "updatedBy", "version" ]
       },
       "ResultConfigDetail" : {
         "type" : "object",
@@ -2415,7 +2426,8 @@
             "type" : "integer",
             "format" : "int32"
           }
-        }
+        },
+        "required" : [ "configGroup", "configKey", "configValue", "id", "publicFlag", "updatedAt", "version" ]
       },
       "PageResultConfigSummary" : {
         "type" : "object",
@@ -2814,7 +2826,8 @@
             "type" : "string",
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "action", "createdAt", "id", "module", "success" ]
       },
       "PageResultOperationLogSummary" : {
         "type" : "object",
@@ -2908,7 +2921,8 @@
             "type" : "string",
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "action", "createdAt", "id", "module", "success" ]
       },
       "ResultOperationLogDetail" : {
         "type" : "object",
@@ -2963,7 +2977,8 @@
             "type" : "string",
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "action", "createdAt", "device", "id", "loginType", "success", "username" ]
       },
       "PageResultLoginLogSummary" : {
         "type" : "object",
@@ -3044,7 +3059,8 @@
             "type" : "string",
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "action", "createdAt", "device", "id", "loginType", "success", "username" ]
       },
       "ResultLoginLogDetail" : {
         "type" : "object",

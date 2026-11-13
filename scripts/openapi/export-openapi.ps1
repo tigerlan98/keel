@@ -10,7 +10,10 @@ $adminOpenApiDir = Join-Path $repoRoot 'frontend\admin\openapi'
 
 Push-Location $backendDir
 try {
-    mvn -q -pl keel-bootstrap -am -Dtest=OpenApiSnapshotTest -Dsurefire.failIfNoSpecifiedTests=false test
+    mvn -q -pl keel-bootstrap -am "-Dtest=OpenApiSnapshotTest" "-Dsurefire.failIfNoSpecifiedTests=false" test
+    if ($LASTEXITCODE -ne 0) {
+        throw "OpenAPI 快照导出失败：mvn 退出码 $LASTEXITCODE"
+    }
 } finally {
     Pop-Location
 }

@@ -1,12 +1,25 @@
 package io.github.keel.audit.interfaces.admin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
+
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
 
 /**
  * 登录日志详情响应。
  */
-public record LoginLogDetail(Long id, String traceId, Long userId, String username,
-                             String action, String loginType, String device, String ip,
-                             String userAgent, Boolean success, String failureReason,
-                             LocalDateTime createdAt) {
+public record LoginLogDetail(
+        @Schema(requiredMode = REQUIRED) Long id,
+        String traceId,
+        Long userId,
+        @Schema(requiredMode = REQUIRED) String username,
+        @Schema(requiredMode = REQUIRED) String action,
+        @Schema(requiredMode = REQUIRED) String loginType,
+        @Schema(requiredMode = REQUIRED) String device,
+        String ip,
+        String userAgent,
+        @Schema(requiredMode = REQUIRED) Boolean success,
+        String failureReason,
+        @Schema(requiredMode = REQUIRED) LocalDateTime createdAt) {
 }
