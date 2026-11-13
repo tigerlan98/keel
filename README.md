@@ -16,6 +16,8 @@ keel/
 └── CLAUDE.md           项目协作与开发规范
 ```
 
+面向 AI Agent 与新人：根目录 `AGENTS.md`（仓库与后端约定）、`frontend/admin/AGENTS.md`、`frontend/portal/AGENTS.md`。
+
 ## 环境要求
 
 | 工具 | 版本 |
