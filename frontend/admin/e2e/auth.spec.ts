@@ -9,7 +9,7 @@ test.describe('认证与会话', () => {
     await page.goto('/iam/users')
 
     await expect(page).toHaveURL('/login?redirect=/iam/users')
-    await expect(page.getByRole('heading', { name: 'Keel 管理端' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '登录' })).toBeVisible()
   })
 
   test('登录成功后进入首页并提交 WEB 设备', async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('认证与会话', () => {
 
     await page.goto('/login')
     await page.getByLabel('用户名').fill('admin')
-    await page.getByLabel('密码').fill('secret')
+    await page.getByLabel('密码', { exact: true }).fill('secret')
     await page.getByRole('button', { name: '登录' }).click()
 
     await expect(page).toHaveURL('/')
@@ -46,7 +46,7 @@ test.describe('认证与会话', () => {
 
     await page.goto('/login')
     await page.getByLabel('用户名').fill('admin')
-    await page.getByLabel('密码').fill('wrong')
+    await page.getByLabel('密码', { exact: true }).fill('wrong')
     await page.getByRole('button', { name: '登录' }).click()
 
     await expect(page.getByText('用户名或密码错误')).toBeVisible()
@@ -70,7 +70,7 @@ test.describe('认证与会话', () => {
 
     await page.goto('/login')
     await page.getByLabel('用户名').fill('admin')
-    await page.getByLabel('密码').fill('wrong')
+    await page.getByLabel('密码', { exact: true }).fill('wrong')
     await page.getByRole('button', { name: '登录' }).click()
 
     await expect(page.getByText('登录失败次数过多，请稍后再试')).toBeVisible()
@@ -87,7 +87,10 @@ test.describe('认证与会话', () => {
 
     await page.goto('/')
     await expect(page.getByText('超级管理员')).toBeVisible()
-    await page.getByRole('button', { name: '退出登录' }).click()
+
+    await page.getByRole('button', { name: '用户菜单：超级管理员' }).click()
+    await page.getByRole('menuitem', { name: '退出登录' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: '退出登录' }).click()
 
     await expect(page).toHaveURL('/login')
   })

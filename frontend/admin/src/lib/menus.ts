@@ -30,6 +30,31 @@ export function menuIcon(name?: string | null): LucideIcon {
   return (name && ICONS[name]) || Circle
 }
 
+/**
+ * 返回从顶层到当前路径的菜单链，用于顶栏面包屑与侧栏激活父级。
+ */
+export function findMenuTrail(menus: MenuNode[], path: string): MenuNode[] {
+  for (const menu of menus) {
+    if (menu.path === path) {
+      return [menu]
+    }
+    if (menu.children?.length) {
+      const childTrail = findMenuTrail(menu.children, path)
+      if (childTrail.length > 0) {
+        return [menu, ...childTrail]
+      }
+    }
+  }
+  return []
+}
+
+export function menuContainsPath(menu: MenuNode, path: string): boolean {
+  if (menu.path === path) {
+    return true
+  }
+  return (menu.children ?? []).some((child) => menuContainsPath(child, path))
+}
+
 export function firstMenuPath(
   menus: MenuNode[],
   matches: (path: string) => boolean = () => true,

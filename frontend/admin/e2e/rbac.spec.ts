@@ -60,21 +60,25 @@ test.describe('RBAC 与菜单', () => {
 
     await expect(page.getByText('无权限执行该操作').first()).toBeVisible()
     await expect(page).toHaveURL('/iam/users')
-    await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '用户菜单：超级管理员' })).toBeVisible()
   })
 
   test('角色页面可新增角色并提交编码', async ({ page }) => {
-    await mockSessionWithMenus(page, [
-      userMenu,
-      {
-        ...userMenu,
-        id: 20,
-        code: 'iam:role:list',
-        name: '角色管理',
-        path: '/iam/roles',
-        children: [],
-      },
-    ], ['iam:user:list', 'iam:role:list'])
+    await mockSessionWithMenus(
+      page,
+      [
+        userMenu,
+        {
+          ...userMenu,
+          id: 20,
+          code: 'iam:role:list',
+          name: '角色管理',
+          path: '/iam/roles',
+          children: [],
+        },
+      ],
+      ['iam:user:list', 'iam:role:list'],
+    )
 
     let createdBody: unknown
     await page.route('**/api/v1/admin/iam/roles*', async (route) => {
@@ -109,17 +113,21 @@ test.describe('RBAC 与菜单', () => {
   })
 
   test('资源停用冲突展示后端错误', async ({ page }) => {
-    await mockSessionWithMenus(page, [
-      userMenu,
-      {
-        ...userMenu,
-        id: 21,
-        code: 'iam:resource:list',
-        name: '资源管理',
-        path: '/iam/resources',
-        children: [],
-      },
-    ], ['iam:user:list', 'iam:resource:list'])
+    await mockSessionWithMenus(
+      page,
+      [
+        userMenu,
+        {
+          ...userMenu,
+          id: 21,
+          code: 'iam:resource:list',
+          name: '资源管理',
+          path: '/iam/resources',
+          children: [],
+        },
+      ],
+      ['iam:user:list', 'iam:resource:list'],
+    )
 
     await page.route('**/api/v1/admin/iam/resources/tree', (route) =>
       route.fulfill(

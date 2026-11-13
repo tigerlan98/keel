@@ -1,0 +1,1198 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Keel 管理端 · 登录</title>
+    <style>
+      :root {
+        --ink: #0b1312;
+        --ink-raise: #16302b;
+        --verdigris: #3e8b7e;
+        --verdigris-bright: #6ac4b3;
+        --verdigris-ring: #8adbc9;
+        --canvas: #eef0eb;
+        --card: #ffffff;
+        --paper: #f5f4ef;
+        --line: #dcdfd8;
+        --muted: #5f6a66;
+        --danger: #b4433b;
+        --font-sans:
+          "Inter", "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont,
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        --font-display:
+          "Bahnschrift", "DIN Alternate", "Avenir Next Condensed", "Segoe UI", -apple-system,
+          "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        color: var(--ink);
+        background: var(--canvas);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1.38fr) minmax(0, 1fr);
+        min-height: 100dvh;
+        padding: 14px;
+        background:
+          radial-gradient(ellipse 55% 60% at 78% 45%, #f8f9f5 0%, transparent 70%),
+          var(--canvas);
+      }
+
+      /* ---------- 左侧品牌面板 ---------- */
+
+      .hero {
+        position: relative;
+        isolation: isolate;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: clamp(26px, 3vw, 42px);
+        color: var(--paper);
+        background:
+          radial-gradient(ellipse 60% 55% at 62% 44%, rgba(62, 139, 126, 0.25), transparent 68%),
+          linear-gradient(145deg, #0d1b18 0%, #0a1211 48%, #0e1e1a 100%);
+        border-radius: 20px;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background-image:
+          linear-gradient(rgba(245, 244, 239, 0.042) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(245, 244, 239, 0.042) 1px, transparent 1px);
+        background-size: 72px 72px;
+        -webkit-mask-image: radial-gradient(ellipse 78% 72% at 55% 45%, #000 25%, transparent 88%);
+        mask-image: radial-gradient(ellipse 78% 72% at 55% 45%, #000 25%, transparent 88%);
+        pointer-events: none;
+      }
+
+      .hero > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-glow {
+        position: absolute;
+        z-index: 0;
+        top: 4%;
+        left: 38%;
+        width: min(72vw, 820px);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(62, 139, 126, 0.23) 0%,
+          rgba(62, 139, 126, 0.07) 38%,
+          transparent 68%
+        );
+        filter: blur(6px);
+        pointer-events: none;
+      }
+
+      .particles span {
+        position: absolute;
+        z-index: 0;
+        width: var(--s);
+        height: var(--s);
+        border-radius: 50%;
+        background: var(--verdigris-bright);
+        box-shadow: 0 0 10px rgba(106, 196, 179, 0.55);
+        opacity: var(--o);
+        pointer-events: none;
+      }
+
+      .hero-top {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+      }
+
+      .brand-mark {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        flex: none;
+        color: var(--paper);
+        background: rgba(245, 244, 239, 0.045);
+        border: 1px solid rgba(245, 244, 239, 0.14);
+        border-radius: 9px;
+      }
+
+      .brand-mark svg {
+        display: block;
+      }
+
+      .wordmark {
+        font-family: var(--font-display);
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: 0.32em;
+      }
+
+      .brand-sub {
+        display: block;
+        margin-top: 6px;
+        font-size: 10px;
+        line-height: 1;
+        letter-spacing: 0.14em;
+        color: rgba(245, 244, 239, 0.46);
+      }
+
+      .hero-main {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.8fr);
+        align-items: center;
+        gap: clamp(22px, 3.2vw, 56px);
+        padding: 28px 0 20px;
+      }
+
+      .hero-copy {
+        max-width: 560px;
+        animation: rise 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) 0.08s both;
+      }
+
+      .eyebrow {
+        display: block;
+        font-size: 10px;
+        line-height: 1.4;
+        letter-spacing: 0.16em;
+        color: rgba(245, 244, 239, 0.42);
+      }
+
+      .hero-copy h1 {
+        margin: 18px 0 0;
+        font-size: clamp(30px, 3vw, 56px);
+        font-weight: 700;
+        line-height: 1.14;
+        letter-spacing: -0.035em;
+      }
+
+      .hero-copy h1 span {
+        display: block;
+        white-space: nowrap;
+      }
+
+      .hero-copy p {
+        margin: 20px 0 0;
+        max-width: 35ch;
+        font-size: clamp(12.5px, 1vw, 14.5px);
+        line-height: 1.85;
+        color: rgba(245, 244, 239, 0.58);
+      }
+
+      /* ---------- 时钟 ---------- */
+
+      .clock {
+        position: relative;
+        width: min(100%, clamp(220px, 20vw, 300px));
+        aspect-ratio: 1;
+        margin: 0 auto;
+        animation: rise 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) 0.18s both;
+      }
+
+      .clock svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        overflow: visible;
+      }
+
+      .clock-tick {
+        stroke: rgba(245, 244, 239, 0.42);
+        opacity: 0.2;
+        transition:
+          stroke 0.35s ease,
+          opacity 0.35s ease,
+          stroke-width 0.35s ease,
+          filter 0.35s ease;
+      }
+
+      .clock-tick.major {
+        opacity: 0.45;
+      }
+
+      .clock-tick.active {
+        stroke: var(--verdigris-ring);
+        opacity: calc(0.55 + var(--strength) * 0.45);
+        stroke-width: 1.8;
+        filter: drop-shadow(0 0 3px rgba(138, 219, 201, 0.55));
+      }
+
+      .clock-tick.current {
+        opacity: 1;
+        stroke-width: 2.6;
+      }
+
+      .clock-readout {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+      }
+
+      .clock-time {
+        font-family: var(--font-display);
+        font-size: clamp(28px, 2.2vw, 38px);
+        font-weight: 500;
+        line-height: 1;
+        letter-spacing: 0.04em;
+        color: var(--paper);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .clock-date {
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        color: rgba(245, 244, 239, 0.5);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---------- 底部状态与能力 ---------- */
+
+      .hero-bottom {
+        display: grid;
+        grid-template-columns: 118px minmax(0, 1fr);
+        gap: 12px;
+        animation: rise 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) 0.3s both;
+      }
+
+      .status-card,
+      .feature-panel {
+        background: rgba(245, 244, 239, 0.035);
+        border: 1px solid rgba(245, 244, 239, 0.09);
+        border-radius: 13px;
+        backdrop-filter: blur(10px);
+      }
+
+      .status-card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px;
+        min-height: 118px;
+      }
+
+      .status-label {
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        color: rgba(245, 244, 239, 0.42);
+      }
+
+      .status-main {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgba(245, 244, 239, 0.9);
+      }
+
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        flex: none;
+        border-radius: 50%;
+        background: var(--verdigris-bright);
+        box-shadow: 0 0 0 4px rgba(106, 196, 179, 0.12);
+        transition:
+          background-color 0.25s ease,
+          box-shadow 0.25s ease;
+      }
+
+      .status-note {
+        margin-top: auto;
+        font-size: 10px;
+        line-height: 1.5;
+        color: rgba(245, 244, 239, 0.4);
+      }
+
+      .status-card[data-state="loading"] .status-dot {
+        background: #d9b36c;
+        box-shadow: 0 0 0 4px rgba(217, 179, 108, 0.14);
+        animation: status-pulse 1.4s ease-in-out infinite;
+      }
+
+      .status-card[data-state="error"] .status-dot {
+        background: #e07166;
+        box-shadow: 0 0 0 4px rgba(224, 113, 102, 0.14);
+      }
+
+      .status-card[data-state="error"] .status-note {
+        color: rgba(240, 164, 155, 0.72);
+      }
+
+      .feature-panel {
+        padding: 14px 16px;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px 26px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .feature {
+        display: flex;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .feature-icon {
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        flex: none;
+        color: var(--verdigris-bright);
+        background: rgba(106, 196, 179, 0.1);
+        border: 1px solid rgba(106, 196, 179, 0.14);
+        border-radius: 7px;
+      }
+
+      .feature-icon svg {
+        display: block;
+      }
+
+      .feature h3 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.35;
+        color: rgba(245, 244, 239, 0.88);
+      }
+
+      .feature p {
+        margin: 4px 0 0;
+        font-size: 10.5px;
+        line-height: 1.55;
+        color: rgba(245, 244, 239, 0.43);
+      }
+
+      .hero-footer {
+        margin-top: 14px;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        color: rgba(245, 244, 239, 0.3);
+      }
+
+      /* ---------- 右侧登录卡 ---------- */
+
+      .auth {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: clamp(24px, 4vw, 64px);
+      }
+
+      .login-card {
+        width: 100%;
+        max-width: 380px;
+        padding: clamp(28px, 2.4vw, 34px);
+        background: var(--card);
+        border: 1px solid rgba(12, 23, 22, 0.06);
+        border-radius: 16px;
+        box-shadow:
+          0 34px 90px -46px rgba(12, 23, 22, 0.5),
+          0 2px 8px rgba(12, 23, 22, 0.03);
+        animation: rise 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) 0.16s both;
+      }
+
+      .login-kicker {
+        display: block;
+        font-size: 10.5px;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+      }
+
+      .login-head h1 {
+        margin: 6px 0 0;
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 1.2;
+        letter-spacing: -0.03em;
+      }
+
+      .login-head p {
+        margin: 9px 0 0;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      .login-form {
+        margin-top: 24px;
+      }
+
+      .field + .field {
+        margin-top: 16px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      .input-shell {
+        position: relative;
+      }
+
+      .input-icon {
+        position: absolute;
+        top: 50%;
+        left: 12px;
+        display: grid;
+        place-items: center;
+        color: #7a8580;
+        pointer-events: none;
+        transform: translateY(-50%);
+      }
+
+      .input-shell input {
+        width: 100%;
+        height: 44px;
+        padding: 0 12px 0 38px;
+        font: inherit;
+        font-size: 14px;
+        color: var(--ink);
+        background: #fbfbf9;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        transition:
+          border-color 0.15s ease,
+          box-shadow 0.15s ease,
+          background-color 0.15s ease;
+      }
+
+      .input-shell input::placeholder {
+        color: #64706b;
+      }
+
+      .input-shell input:hover {
+        border-color: #c6cac2;
+      }
+
+      .input-shell input:focus {
+        outline: none;
+        background: var(--card);
+        border-color: var(--verdigris);
+        box-shadow: 0 0 0 3px rgba(62, 139, 126, 0.14);
+      }
+
+      .input-shell input[aria-invalid="true"] {
+        border-color: var(--danger);
+      }
+
+      .input-shell input[aria-invalid="true"]:focus {
+        box-shadow: 0 0 0 3px rgba(180, 67, 59, 0.12);
+      }
+
+      .has-reveal input {
+        padding-right: 44px;
+      }
+
+      .reveal {
+        position: absolute;
+        top: 50%;
+        right: 3px;
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        color: #7a8580;
+        background: transparent;
+        border: 0;
+        border-radius: 6px;
+        cursor: pointer;
+        transform: translateY(-50%);
+        transition:
+          color 0.15s ease,
+          background-color 0.15s ease;
+      }
+
+      .reveal:hover {
+        color: var(--ink);
+        background: #f0f1ec;
+      }
+
+      .reveal:focus-visible {
+        outline: 2px solid var(--verdigris);
+        outline-offset: 1px;
+      }
+
+      .reveal svg {
+        display: block;
+      }
+
+      .field-error {
+        display: flex;
+        align-items: flex-start;
+        gap: 5px;
+        margin: 6px 0 0;
+        font-size: 11.5px;
+        line-height: 1.45;
+        color: var(--danger);
+      }
+
+      .field-error svg {
+        flex: none;
+        margin-top: 1px;
+      }
+
+      .form-error {
+        display: flex;
+        align-items: flex-start;
+        gap: 7px;
+        margin-top: 16px;
+        padding: 9px 11px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #8e332d;
+        background: rgba(180, 67, 59, 0.065);
+        border: 1px solid rgba(180, 67, 59, 0.2);
+        border-left: 3px solid var(--danger);
+        border-radius: 6px;
+      }
+
+      .form-error svg {
+        flex: none;
+        margin-top: 1px;
+      }
+
+      .submit {
+        width: 100%;
+        height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        margin-top: 20px;
+        padding: 0;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        color: var(--paper);
+        background: var(--ink);
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition:
+          background-color 0.16s ease,
+          box-shadow 0.16s ease,
+          transform 0.16s ease;
+      }
+
+      .submit:hover:not(:disabled) {
+        background: var(--ink-raise);
+        box-shadow: 0 12px 26px -18px rgba(62, 139, 126, 0.65);
+      }
+
+      .submit:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+
+      .submit:focus-visible {
+        outline: 2px solid var(--verdigris);
+        outline-offset: 3px;
+      }
+
+      .submit:disabled {
+        cursor: progress;
+        opacity: 0.86;
+      }
+
+      .spinner {
+        width: 15px;
+        height: 15px;
+        display: none;
+        border: 2px solid rgba(245, 244, 239, 0.24);
+        border-top-color: var(--paper);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+
+      .submit[data-loading="true"] .spinner {
+        display: block;
+      }
+
+      .form-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: 18px;
+        padding-top: 14px;
+        font-size: 10.5px;
+        line-height: 1.6;
+        color: var(--muted);
+        border-top: 1px solid #e6e8e2;
+      }
+
+      .form-note svg {
+        flex: none;
+        margin-top: 1px;
+      }
+
+      /* ---------- 动效 ---------- */
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes status-pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 4px rgba(217, 179, 108, 0.12);
+        }
+        50% {
+          box-shadow: 0 0 0 7px rgba(217, 179, 108, 0.04);
+        }
+      }
+
+      /* ---------- 响应式 ---------- */
+
+      @media (max-width: 1180px) {
+        .hero-main {
+          grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.8fr);
+          gap: 24px;
+        }
+
+        .clock {
+          width: clamp(200px, 19vw, 250px);
+        }
+
+        .features {
+          gap: 12px 18px;
+        }
+
+        .feature p {
+          font-size: 10px;
+        }
+      }
+
+      @media (max-width: 1024px) {
+        .shell {
+          grid-template-columns: minmax(0, 1fr);
+          padding: 12px;
+        }
+
+        .hero {
+          padding: 26px 24px;
+        }
+
+        .hero-main {
+          display: block;
+          padding: 44px 0 30px;
+        }
+
+        .hero-copy {
+          max-width: 560px;
+        }
+
+        .hero-copy h1 {
+          font-size: clamp(32px, 6vw, 44px);
+        }
+
+        .hero-copy p {
+          max-width: 46ch;
+        }
+
+        .clock,
+        .hero-bottom,
+        .hero-footer {
+          display: none;
+        }
+
+        .auth {
+          padding: 32px 20px 48px;
+        }
+
+        .login-card {
+          max-width: 420px;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .hero {
+          padding: 22px 20px;
+        }
+
+        .hero-copy h1 {
+          font-size: 30px;
+        }
+
+        .login-card {
+          padding: 24px 22px;
+        }
+
+        .login-head h1 {
+          font-size: 26px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .hero-copy p {
+          font-size: 11.5px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-delay: 0ms !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero" aria-label="Keel 管理控制台">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="particles" aria-hidden="true">
+          <span style="left: 15%; top: 36%; --s: 3px; --o: 0.45"></span>
+          <span style="left: 28%; top: 64%; --s: 2px; --o: 0.3"></span>
+          <span style="left: 47%; top: 17%; --s: 2px; --o: 0.42"></span>
+          <span style="left: 74%; top: 25%; --s: 2px; --o: 0.38"></span>
+          <span style="left: 86%; top: 58%; --s: 3px; --o: 0.28"></span>
+          <span style="left: 57%; top: 76%; --s: 2px; --o: 0.24"></span>
+        </div>
+
+        <div class="hero-top">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M6.5 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+              <path d="M7 11.5 19 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+              <path d="M7 12.5 19 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+              <circle cx="7" cy="12" r="2" fill="#6AC4B3" />
+            </svg>
+          </span>
+          <div>
+            <span class="wordmark">KEEL</span>
+            <span class="brand-sub">ADMIN CONSOLE · 管理控制台</span>
+          </div>
+        </div>
+
+        <div class="hero-main">
+          <div class="hero-copy">
+            <span class="eyebrow">后台底座 · v1.0.0</span>
+            <h1>
+              <span>统一的后台底座，</span>
+              <span>专注业务本身。</span>
+            </h1>
+            <p>
+              认证、RBAC、系统参数与审计日志开箱即用；<br />
+              新业务模块只需关注字段与流程。
+            </p>
+          </div>
+
+          <div class="clock" aria-hidden="true">
+            <svg viewBox="0 0 260 260" fill="none">
+              <circle cx="130" cy="130" r="86" stroke="rgba(245,244,239,.06)" stroke-width="1" />
+              <g id="clock-ticks" transform="translate(130 130)"></g>
+            </svg>
+            <div class="clock-readout">
+              <span class="clock-time" id="clock-time">--:--:--</span>
+              <span class="clock-date" id="clock-date">----.--.-- · ---</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-bottom">
+          <div class="status-card" id="status-card" data-state="ready" role="status" aria-live="polite">
+            <span class="status-label">服务连接</span>
+            <div class="status-main">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span id="status-text">就绪</span>
+            </div>
+            <span class="status-note" id="status-note">等待登录</span>
+          </div>
+
+          <div class="feature-panel">
+            <ul class="features">
+              <li class="feature">
+                <span class="feature-icon" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 3.5 19 6v5.2c0 4.4-2.8 7.6-7 9.3-4.2-1.7-7-4.9-7-9.3V6l7-2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                    <path d="m8.7 12 2.2 2.2 4.4-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <div>
+                  <h3>用户与角色</h3>
+                  <p>账号、角色与按钮级权限统一管理。</p>
+                </div>
+              </li>
+
+              <li class="feature">
+                <span class="feature-icon" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.6" />
+                    <path d="M3.8 19c.5-3.1 2.6-4.9 5.2-4.9s4.7 1.8 5.2 4.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    <path d="M16 5.8a3.2 3.2 0 0 1 0 6.4M17.4 14.4c1.8.7 2.9 2.3 3.2 4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <div>
+                  <h3>资源与菜单</h3>
+                  <p>资源树、权限码与菜单同源维护。</p>
+                </div>
+              </li>
+
+              <li class="feature">
+                <span class="feature-icon" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    <circle cx="9" cy="7" r="2" fill="var(--ink)" stroke="currentColor" stroke-width="1.6" />
+                    <circle cx="15" cy="12" r="2" fill="var(--ink)" stroke="currentColor" stroke-width="1.6" />
+                    <circle cx="8" cy="17" r="2" fill="var(--ink)" stroke="currentColor" stroke-width="1.6" />
+                  </svg>
+                </span>
+                <div>
+                  <h3>系统参数</h3>
+                  <p>Flyway 迁移维护，Redis 缓存读取。</p>
+                </div>
+              </li>
+
+              <li class="feature">
+                <span class="feature-icon" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 3.8h9l3 3V20H6V3.8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                    <path d="M15 3.8V7h3M9 11h6M9 14.5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <div>
+                  <h3>审计日志</h3>
+                  <p>操作日志异步写入，登录记录可追溯。</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="hero-footer">© 2026 Keel · 管理端</div>
+      </section>
+
+      <section class="auth">
+        <div class="login-card">
+          <header class="login-head">
+            <span class="login-kicker">账号登录</span>
+            <h1>登录</h1>
+            <p>使用管理员账号进入 Keel 管理控制台</p>
+          </header>
+
+          <form class="login-form" id="login-form" novalidate>
+            <div class="field">
+              <label for="username">用户名</label>
+              <div class="input-shell">
+                <span class="input-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M5 20c.6-3.7 3.2-5.8 7-5.8s6.4 2.1 7 5.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  autocomplete="username"
+                  placeholder="请输入用户名"
+                  aria-describedby="username-error"
+                  aria-invalid="false"
+                />
+              </div>
+              <p class="field-error" id="username-error" role="alert" hidden>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
+                  <path d="M12 7.5V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  <circle cx="12" cy="16.5" r="1" fill="currentColor" />
+                </svg>
+                <span>请输入用户名</span>
+              </p>
+            </div>
+
+            <div class="field has-reveal">
+              <label for="password">密码</label>
+              <div class="input-shell">
+                <span class="input-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="请输入密码"
+                  aria-describedby="password-error"
+                  aria-invalid="false"
+                />
+                <button type="button" class="reveal" aria-label="显示密码" aria-pressed="false">
+                  <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7" />
+                  </svg>
+                  <svg class="icon-eye-off" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" hidden>
+                    <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                    <path d="M10.6 5.7A10.9 10.9 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17.6 17.6 0 0 1-3.1 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M6.3 6.9A17.9 17.9 0 0 0 2.5 12s3.5 6.5 9.5 6.5c1.5 0 2.9-.4 4.1-1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </div>
+              <p class="field-error" id="password-error" role="alert" hidden>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
+                  <path d="M12 7.5V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  <circle cx="12" cy="16.5" r="1" fill="currentColor" />
+                </svg>
+                <span>请输入密码</span>
+              </p>
+            </div>
+
+            <div class="form-error" id="form-error" role="alert" hidden>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
+                <path d="M12 7.5V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                <circle cx="12" cy="16.5" r="1" fill="currentColor" />
+              </svg>
+              <span id="form-error-text">无法连接服务，请确认后端已启动或稍后重试。</span>
+            </div>
+
+            <button class="submit" id="submit" type="submit" data-loading="false">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="submit-label">登录</span>
+            </button>
+          </form>
+
+          <p class="form-note">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.7" />
+              <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+            <span>仅限授权管理员访问。连续失败 5 次将锁定 15 分钟。</span>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      /* ---------- 实时时钟 ---------- */
+
+      const ticksGroup = document.getElementById('clock-ticks')
+      const clockTime = document.getElementById('clock-time')
+      const clockDate = document.getElementById('clock-date')
+      const ticks = []
+      const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
+      for (let i = 0; i < 60; i += 1) {
+        const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+        const isMajor = i % 5 === 0
+
+        tick.setAttribute('x1', '0')
+        tick.setAttribute('y1', '-102')
+        tick.setAttribute('x2', '0')
+        tick.setAttribute('y2', isMajor ? '-119' : '-112')
+        tick.setAttribute('stroke-width', isMajor ? '1.6' : '1.1')
+        tick.setAttribute('stroke-linecap', 'round')
+        tick.setAttribute('transform', `rotate(${i * 6})`)
+        tick.setAttribute('class', isMajor ? 'clock-tick major' : 'clock-tick')
+        ticksGroup.appendChild(tick)
+        ticks.push(tick)
+      }
+
+      function pad(value) {
+        return String(value).padStart(2, '0')
+      }
+
+      function updateClock() {
+        const now = new Date()
+        const seconds = now.getSeconds()
+
+        clockTime.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(seconds)}`
+        clockDate.textContent = `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} · ${weekdays[now.getDay()]}`
+
+        ticks.forEach((tick, index) => {
+          const diff = (seconds - index + 60) % 60
+          tick.classList.toggle('active', diff < 14)
+          tick.classList.toggle('current', diff === 0)
+          tick.style.setProperty('--strength', diff < 14 ? String(1 - diff / 14) : '0')
+        })
+      }
+
+      updateClock()
+      window.setInterval(updateClock, 1000)
+
+      /* ---------- 登录表单 ---------- */
+
+      const form = document.getElementById('login-form')
+      const usernameInput = document.getElementById('username')
+      const passwordInput = document.getElementById('password')
+      const submitButton = document.getElementById('submit')
+      const submitLabel = submitButton.querySelector('.submit-label')
+      const formError = document.getElementById('form-error')
+      const formErrorText = document.getElementById('form-error-text')
+      const revealButton = document.querySelector('.reveal')
+      const iconEye = revealButton.querySelector('.icon-eye')
+      const iconEyeOff = revealButton.querySelector('.icon-eye-off')
+      const statusCard = document.getElementById('status-card')
+      const statusText = document.getElementById('status-text')
+      const statusNote = document.getElementById('status-note')
+
+      let submitting = false
+
+      function setFieldError(input, message) {
+        const error = document.getElementById(input.id + '-error')
+        input.setAttribute('aria-invalid', message ? 'true' : 'false')
+
+        if (message) {
+          error.querySelector('span').textContent = message
+          error.hidden = false
+        } else {
+          error.hidden = true
+        }
+      }
+
+      function setFormError(message) {
+        if (message) {
+          formErrorText.textContent = message
+          formError.hidden = false
+        } else {
+          formError.hidden = true
+        }
+      }
+
+      function setStatus(state) {
+        statusCard.dataset.state = state
+
+        if (state === 'loading') {
+          statusText.textContent = '连接中'
+          statusNote.textContent = '正在验证凭据'
+        } else if (state === 'error') {
+          statusText.textContent = '连接中断'
+          statusNote.textContent = '请检查后端服务'
+        } else {
+          statusText.textContent = '就绪'
+          statusNote.textContent = '等待登录'
+        }
+      }
+
+      function setSubmitting(value) {
+        submitting = value
+        submitButton.disabled = value
+        submitButton.dataset.loading = String(value)
+        submitButton.setAttribute('aria-busy', String(value))
+        submitLabel.textContent = value ? '正在登录' : '登录'
+      }
+
+      ;[usernameInput, passwordInput].forEach((input) => {
+        input.addEventListener('input', () => {
+          setFieldError(input, '')
+          setFormError('')
+          if (!submitting) setStatus('ready')
+        })
+      })
+
+      revealButton.addEventListener('click', () => {
+        const isHidden = passwordInput.type === 'password'
+        passwordInput.type = isHidden ? 'text' : 'password'
+        revealButton.setAttribute('aria-pressed', String(isHidden))
+        revealButton.setAttribute('aria-label', isHidden ? '隐藏密码' : '显示密码')
+        iconEye.hidden = isHidden
+        iconEyeOff.hidden = !isHidden
+        passwordInput.focus()
+      })
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault()
+        if (submitting) return
+
+        setFormError('')
+
+        const username = usernameInput.value.trim()
+        const password = passwordInput.value
+        let firstInvalid = null
+
+        if (!username) {
+          setFieldError(usernameInput, '请输入用户名')
+          firstInvalid = usernameInput
+        } else {
+          setFieldError(usernameInput, '')
+        }
+
+        if (!password) {
+          setFieldError(passwordInput, '请输入密码')
+          firstInvalid = firstInvalid || passwordInput
+        } else {
+          setFieldError(passwordInput, '')
+        }
+
+        if (firstInvalid) {
+          firstInvalid.focus()
+          return
+        }
+
+        // 原型演示：模拟网络失败，用于评审连接状态与错误态。
+        setStatus('loading')
+        setSubmitting(true)
+
+        window.setTimeout(() => {
+          setSubmitting(false)
+          setStatus('error')
+          setFormError('无法连接服务，请确认后端已启动或稍后重试。')
+        }, 1200)
+      })
+    </script>
+  </body>
+</html>

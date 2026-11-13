@@ -115,9 +115,6 @@ router.beforeEach(async (to) => {
   if (auth.mustChangePassword && !to.meta.allowPasswordChangeRequired) {
     return { name: 'change-password' }
   }
-  if (!auth.mustChangePassword && to.name === 'change-password') {
-    return { name: 'home' }
-  }
 
   if (to.name === 'home') {
     const target = firstMenuPath(auth.menus, isRoutableMenuPath)
