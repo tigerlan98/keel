@@ -77,7 +77,7 @@ test.describe('RBAC 与菜单', () => {
     ], ['iam:user:list', 'iam:role:list'])
 
     let createdBody: unknown
-    await page.route('**/api/v1/admin/iam/roles', async (route) => {
+    await page.route('**/api/v1/admin/iam/roles*', async (route) => {
       if (route.request().method() === 'POST') {
         createdBody = route.request().postDataJSON()
         await route.fulfill(

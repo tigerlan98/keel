@@ -5,10 +5,6 @@
     "description" : "Keel 管理端与门户公开接口",
     "version" : "v1"
   },
-  "servers" : [ {
-    "url" : "http://localhost:28377",
-    "description" : "Generated server url"
-  } ],
   "security" : [ {
     "cookieAuth" : [ ]
   }, {
