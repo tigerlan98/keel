@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { mockSession, ok } from './support/api-mocks'
+import { chooseOption } from './support/controls'
 
 const users = [
   {
@@ -46,7 +47,7 @@ test.describe('用户列表', () => {
 
     await page.goto('/iam/users')
     await page.getByLabel('用户名').fill('ali')
-    await page.getByLabel('状态').selectOption('ENABLED')
+    await chooseOption(page, '状态', '启用')
     await page.getByRole('button', { name: '查询' }).click()
 
     await expect.poll(() => requests.length).toBeGreaterThan(1)

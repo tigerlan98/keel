@@ -16,11 +16,6 @@
   color: var(--ink-soft);
   font-weight: 600;
 }
-.stat-scope {
-  margin: 0 0 18px;
-  color: var(--ink-soft);
-  font-size: 12px;
-}
 .workbench-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

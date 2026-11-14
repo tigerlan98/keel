@@ -1,5 +1,7 @@
 <script setup lang="ts" generic="T extends object">
 import AppEmptyState from './AppEmptyState.vue'
+import { nextTick, onUnmounted, ref, watch } from 'vue'
+import { revealRows } from '@/lib/motion'
 
 interface Column {
   key: string
@@ -9,7 +11,7 @@ interface Column {
   sticky?: boolean
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     columns: Column[]
     rows: T[]
@@ -18,6 +20,7 @@ withDefaults(
     minWidth?: number
     emptyTitle?: string
     emptyDescription?: string
+    animationKey?: string
   }>(),
   {
     rowKey: 'id',
@@ -25,6 +28,7 @@ withDefaults(
     minWidth: 900,
     emptyTitle: '暂无数据',
     emptyDescription: '',
+    animationKey: undefined,
   },
 )
 
@@ -40,13 +44,40 @@ function cellText(row: T, key: string): string {
 function rowKeyValue(row: T, index: number, key: string): string {
   return String(valueOf(row, key) ?? index)
 }
+
+const body = ref<InstanceType<typeof globalThis.HTMLTableSectionElement> | null>(null)
+let animations: InstanceType<typeof globalThis.Animation>[] = []
+let lastSignature: string | undefined
+let generation = 0
+watch(
+  [() => props.rows, () => props.loading],
+  async () => {
+    const current = ++generation
+    if (props.loading) {
+      animations.forEach((animation) => animation.cancel())
+      return
+    }
+    const signature =
+      props.animationKey ??
+      props.rows.map((row, index) => rowKeyValue(row, index, props.rowKey)).join(',')
+    if (signature === lastSignature) return
+    lastSignature = signature
+    await nextTick()
+    if (current !== generation || !body.value) return
+    animations.forEach((animation) => animation.cancel())
+    animations = revealRows(body.value.querySelectorAll('.data-row'))
+  },
+  { immediate: true },
+)
+onUnmounted(() => {
+  generation++
+  animations.forEach((animation) => animation.cancel())
+})
 </script>
 
 <template>
-  <div class="relative overflow-x-auto" :aria-busy="loading">
-    <div v-if="loading" class="table-loading-bar" role="status">
-      <span class="sr-only">正在加载数据</span>
-    </div>
+  <div class="app-data-table relative overflow-x-auto" :aria-busy="loading">
+    <span v-if="loading" class="sr-only" role="status">正在加载数据</span>
     <table class="data-table" :style="{ minWidth: `${minWidth}px` }">
       <thead>
         <tr>
@@ -62,16 +93,16 @@ function rowKeyValue(row: T, index: number, key: string): string {
         </tr>
       </thead>
 
-      <tbody v-if="loading">
+      <tbody v-if="loading && rows.length === 0">
         <tr v-for="rowIndex in 6" :key="rowIndex">
           <td
-            v-for="column in columns"
+            v-for="(column, columnIndex) in columns"
             :key="column.key"
             :class="[column.align === 'right' && 'text-right', column.sticky && 'col-actions']"
           >
             <div
-              class="table-skeleton h-3.5 rounded-full"
-              :class="column.align === 'right' ? 'ml-auto w-16' : 'w-2/5'"
+              class="table-skeleton h-3 rounded-full"
+              :style="{ width: `${36 + ((rowIndex * 7 + columnIndex * 13) % 48)}%` }"
             ></div>
           </td>
         </tr>
@@ -85,12 +116,12 @@ function rowKeyValue(row: T, index: number, key: string): string {
         </tr>
       </tbody>
 
-      <tbody v-else>
+      <tbody v-else ref="body">
         <tr
           v-for="(row, index) in rows"
           :key="rowKeyValue(row, index, rowKey)"
           class="data-row"
-          :style="{ '--row-delay': `${Math.min(index, 10) * 24}ms` }"
+          :style="loading ? { opacity: 0.55 } : undefined"
         >
           <td
             v-for="column in columns"
@@ -108,59 +139,18 @@ function rowKeyValue(row: T, index: number, key: string): string {
 </template>
 
 <style scoped>
-.table-loading-bar {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 2px;
-  z-index: 20;
-  overflow: hidden;
-  background: var(--brand-soft);
-}
-.table-loading-bar::after {
-  content: '';
-  display: block;
-  width: 35%;
-  height: 100%;
-  background: var(--brand);
-  animation: loading-progress 1.1s ease-in-out infinite;
-}
 .table-skeleton {
-  background: linear-gradient(
-    100deg,
-    rgba(46, 58, 62, 0.06) 25%,
-    rgba(46, 58, 62, 0.13) 45%,
-    rgba(46, 58, 62, 0.06) 65%
-  );
-  background-size: 250% 100%;
-  animation: skeleton-sweep 1.5s ease-in-out infinite;
+  display: block;
+  background: var(--line-soft);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
-.data-row {
-  animation: row-arrive 350ms cubic-bezier(0.16, 1, 0.3, 1) var(--row-delay) both;
-}
-@keyframes loading-progress {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(390%);
-  }
-}
-@keyframes skeleton-sweep {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: -100% 0;
-  }
-}
-@keyframes row-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
+@keyframes skeleton-pulse {
+  0%,
+  100% {
     opacity: 1;
-    transform: none;
+  }
+  50% {
+    opacity: 0.5;
   }
 }
 </style>

@@ -477,21 +477,29 @@ onMounted(() => {
       </AppField>
 
       <AppField label="状态" for="user-status" class="w-[150px]">
-        <AppSelect id="user-status" v-model="filters.status">
-          <option value="">全部</option>
-          <option value="ENABLED">启用</option>
-          <option value="DISABLED">禁用</option>
-        </AppSelect>
+        <AppSelect
+          id="user-status"
+          v-model="filters.status"
+          :options="[
+            { label: '全部', value: '' },
+            { label: '启用', value: 'ENABLED' },
+            { label: '禁用', value: 'DISABLED' },
+          ]"
+        />
       </AppField>
 
       <AppField label="排序" for="user-sort" class="w-[180px]">
-        <AppSelect id="user-sort" v-model="sort">
-          <option value="createdAt,desc">创建时间 ↓</option>
-          <option value="createdAt,asc">创建时间 ↑</option>
-          <option value="username,asc">用户名 ↑</option>
-          <option value="username,desc">用户名 ↓</option>
-          <option value="lastLoginAt,desc">最近登录 ↓</option>
-        </AppSelect>
+        <AppSelect
+          id="user-sort"
+          v-model="sort"
+          :options="[
+            { label: '创建时间 ↓', value: 'createdAt,desc' },
+            { label: '创建时间 ↑', value: 'createdAt,asc' },
+            { label: '用户名 ↑', value: 'username,asc' },
+            { label: '用户名 ↓', value: 'username,desc' },
+            { label: '最近登录 ↓', value: 'lastLoginAt,desc' },
+          ]"
+        />
       </AppField>
 
       <template #actions>

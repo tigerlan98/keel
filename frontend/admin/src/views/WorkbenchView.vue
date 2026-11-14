@@ -26,8 +26,6 @@ const range = ref<24 | 7 | 30>(24)
 const now = ref(new Date())
 const loginLogs = ref<LoginLogSummary[]>([])
 const operationLogs = ref<OperationLogSummary[]>([])
-const loginTotal = ref(0)
-const operationTotal = ref(0)
 const loading = ref(false)
 const hasLoaded = ref(false)
 const initialLoading = computed(() => !hasLoaded.value)
@@ -165,14 +163,12 @@ async function load(): Promise<void> {
   now.value = end
   if (login.status === 'fulfilled' && login.value) {
     loginLogs.value = login.value.items
-    loginTotal.value = login.value.total
   } else if (login.status === 'rejected') {
     loginLogs.value = []
     loginError.value = login.reason instanceof ApiError ? login.reason.message : '登录记录加载失败'
   }
   if (operation.status === 'fulfilled' && operation.value) {
     operationLogs.value = operation.value.items
-    operationTotal.value = operation.value.total
   } else if (operation.status === 'rejected') {
     operationLogs.value = []
     operationError.value =
@@ -229,18 +225,11 @@ onUnmounted(() => {
 
 <template>
   <div class="workbench" :aria-busy="loading">
-    <header class="workbench-heading">
+    <header class="workbench-heading page-reveal">
       <p class="workbench-date">{{ dateStamp }}</p>
       <h1>{{ greeting }}，{{ name }}</h1>
       <p>系统运行概况、登录脉搏与今日操作轨迹。</p>
     </header>
-    <p class="stat-scope">
-      统计范围：近 30 天最新 {{ loginLogs.length }} 条登录记录 /
-      {{ operationLogs.length }} 条操作记录，图表仅统计这些记录。<span
-        v-if="loginTotal > 100 || operationTotal > 100"
-        >完整记录请查看日志。</span
-      >
-    </p>
     <AppErrorState
       v-if="loginError || operationError"
       :message="[loginError, operationError].filter(Boolean).join('；')"

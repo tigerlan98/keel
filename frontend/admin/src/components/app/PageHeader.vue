@@ -6,7 +6,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex flex-wrap items-end justify-between gap-4">
+  <div class="page-reveal flex flex-wrap items-end justify-between gap-4">
     <div class="min-w-0 space-y-1.5">
       <h1 class="text-[22px] font-bold leading-tight tracking-[-0.03em] text-ink md:text-[28px]">
         {{ title }}

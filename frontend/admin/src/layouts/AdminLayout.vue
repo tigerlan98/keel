@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ChevronRight, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, X } from '@lucide/vue'
+import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, X } from '@lucide/vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
-import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 
 import AppConfirm from '@/components/app/AppConfirm.vue'
 import AppearanceSettings from '@/components/app/AppearanceSettings.vue'
 import AppLogo from '@/components/app/AppLogo.vue'
-import MenuTree from '@/components/app/MenuTree.vue'
+import SidebarNavigation from '@/components/app/SidebarNavigation.vue'
 import MenuSearch from '@/components/app/MenuSearch.vue'
 import UserMenu from '@/components/app/UserMenu.vue'
 import { findMenuTrail } from '@/lib/menus'
+import { cancelPageMotion, pageEnter, pageLeave } from '@/lib/motion'
 import { useAuthStore } from '@/stores/auth'
 
 const COLLAPSE_KEY = 'keel.sidebar.collapsed'
@@ -31,6 +32,7 @@ const mobileOpen = ref(false)
 const logoutOpen = ref(false)
 const loggingOut = ref(false)
 const drawerCloseRef = useTemplateRef<{ focus: () => void }>('drawerClose')
+const mainContent = useTemplateRef<InstanceType<typeof globalThis.HTMLElement>>('mainContent')
 
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '未登录')
 const menuTrail = computed(() => findMenuTrail(auth.menus, route.path))
@@ -91,6 +93,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   globalThis.document.removeEventListener('keydown', handleKeydown)
+  mainContent.value?.querySelectorAll('.route-page').forEach(cancelPageMotion)
 })
 </script>
 
@@ -101,21 +104,7 @@ onUnmounted(() => {
         <AppLogo :collapsed="collapsed" />
 
         <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-1" aria-label="主菜单">
-          <RouterLink
-            to="/"
-            class="workbench-link"
-            :class="{ 'is-active': route.name === 'home', 'is-compact': collapsed }"
-            :title="collapsed ? '工作台' : undefined"
-          >
-            <LayoutDashboard :size="18" aria-hidden="true" /><span v-if="!collapsed">工作台</span>
-          </RouterLink>
-          <MenuTree :menus="auth.menus" :collapsed="collapsed" />
-          <p
-            v-if="auth.menus.length === 0 && !collapsed"
-            class="px-3 py-4 text-[11px] leading-5 text-ink-soft"
-          >
-            暂无可见菜单
-          </p>
+          <SidebarNavigation :menus="auth.menus" :collapsed="collapsed" />
         </nav>
 
         <div
@@ -174,10 +163,19 @@ onUnmounted(() => {
           </div>
         </header>
 
-        <main class="app-main">
+        <main ref="mainContent" class="app-main">
           <div class="app-main-inner">
             <RouterView v-slot="{ Component, route: currentRoute }">
-              <Transition name="page" mode="out-in">
+              <Transition
+                :css="false"
+                mode="out-in"
+                appear
+                @enter="pageEnter"
+                @leave="pageLeave"
+                @enter-cancelled="cancelPageMotion"
+                @leave-cancelled="cancelPageMotion"
+                @after-leave="mainContent?.scrollTo({ top: 0 })"
+              >
                 <div :key="currentRoute.path" class="route-page"><component :is="Component" /></div>
               </Transition>
             </RouterView>
@@ -209,16 +207,7 @@ onUnmounted(() => {
               </button>
             </div>
             <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-4" aria-label="主菜单">
-              <RouterLink
-                to="/"
-                class="workbench-link"
-                :class="{ 'is-active': route.name === 'home' }"
-                ><LayoutDashboard :size="18" aria-hidden="true" />工作台</RouterLink
-              >
-              <MenuTree :menus="auth.menus" />
-              <p v-if="auth.menus.length === 0" class="px-3 py-4 text-[11px] text-ink-soft">
-                暂无可见菜单
-              </p>
+              <SidebarNavigation :menus="auth.menus" />
             </nav>
             <div class="border-t border-line-soft px-4 py-3 text-[9.5px] text-ink-faint">
               v1.0.0
@@ -260,7 +249,6 @@ onUnmounted(() => {
   box-shadow:
     0 24px 70px rgba(17, 23, 27, 0.24),
     0 3px 12px rgba(17, 23, 27, 0.16);
-  transition: grid-template-columns 0.42s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .app-shell.is-collapsed {
@@ -309,35 +297,6 @@ onUnmounted(() => {
   margin: 0 auto;
 }
 
-.workbench-link {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  height: 38px;
-  padding: 0 11px;
-  margin: 4px 0 8px;
-  border-radius: 12px;
-  color: var(--ink-muted);
-  font-size: 13px;
-  transition:
-    background-color 180ms ease,
-    box-shadow 180ms ease;
-}
-.workbench-link.is-active {
-  background: var(--pill-surface);
-  box-shadow: var(--shadow-e2), var(--inset-edge);
-  color: var(--brand);
-  font-weight: 650;
-}
-.workbench-link.is-compact {
-  justify-content: center;
-  padding: 0;
-}
-.workbench-link:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
-
 .topbar-icon-button {
   height: 32px;
   width: 32px;
@@ -359,23 +318,6 @@ onUnmounted(() => {
 .topbar-icon-button:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--brand-ring);
-}
-
-.page-enter-active,
-.page-leave-active {
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
-}
-
-.page-enter-from {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-.page-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
 }
 
 .drawer-enter-active,
@@ -429,8 +371,6 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .app-shell,
-  .page-enter-active,
-  .page-leave-active,
   .drawer-enter-active,
   .drawer-leave-active,
   .drawer-enter-active .drawer-panel,

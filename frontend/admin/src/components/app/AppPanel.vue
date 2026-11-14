@@ -10,7 +10,7 @@ withDefaults(
 </script>
 
 <template>
-  <section class="app-panel">
+  <section class="app-panel page-reveal">
     <header
       v-if="$slots.header || $slots.tools"
       class="flex min-h-12 flex-wrap items-center gap-3 border-b border-line-soft px-5 py-3"

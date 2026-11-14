@@ -92,10 +92,9 @@ function changePageSize(value: string | number | undefined): void {
             :model-value="pageSize"
             size="sm"
             aria-label="每页条数"
+            :options="pageSizes.map((size) => ({ label: String(size), value: size }))"
             @update:model-value="changePageSize"
-          >
-            <option v-for="size in pageSizes" :key="size" :value="size">{{ size }}</option>
-          </AppSelect>
+          />
         </span>
       </label>
 

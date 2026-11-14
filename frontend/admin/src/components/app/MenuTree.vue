@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown } from '@lucide/vue'
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 import type { MenuNode } from '@/api/types'
@@ -19,39 +19,8 @@ const props = withDefaults(
 )
 
 const route = useRoute()
+const emit = defineEmits<{ layout: [] }>()
 const openGroups = ref<Record<number, boolean>>({})
-const root = ref<InstanceType<typeof globalThis.HTMLElement> | null>(null)
-const selection = ref({ top: 0, height: 38, visible: false })
-let observer: InstanceType<typeof globalThis.ResizeObserver> | undefined
-async function syncSelection(): Promise<void> {
-  if (props.depth !== 0) return
-  await nextTick()
-  const active =
-    root.value?.querySelector<InstanceType<typeof globalThis.HTMLElement>>('[aria-current="page"]')
-  if (!active || !root.value) {
-    selection.value.visible = false
-    return
-  }
-  const box = active.getBoundingClientRect()
-  selection.value = {
-    top: box.top - root.value.getBoundingClientRect().top,
-    height: box.height,
-    visible: true,
-  }
-}
-watch([() => route.path, () => props.collapsed, openGroups], syncSelection, {
-  deep: true,
-  flush: 'post',
-})
-onMounted(() => {
-  if (props.depth !== 0 || !root.value) return
-  observer = new globalThis.ResizeObserver(() => {
-    void syncSelection()
-  })
-  observer.observe(root.value)
-  void syncSelection()
-})
-onUnmounted(() => observer?.disconnect())
 
 function isOpen(menu: MenuNode): boolean {
   return openGroups.value[menu.id] !== false
@@ -79,26 +48,18 @@ watch(
 </script>
 
 <template>
-  <ul ref="root" class="space-y-0.5" :class="depth === 0 && 'nav-root'">
-    <li
-      v-if="depth === 0"
-      aria-hidden="true"
-      class="nav-selection"
-      :style="{
-        transform: `translateY(${selection.top}px)`,
-        height: `${selection.height}px`,
-        opacity: selection.visible ? 1 : 0,
-      }"
-    ></li>
+  <ul class="nav-list space-y-0.5">
     <li v-for="menu in menus" :key="menu.id">
       <RouterLink
         v-if="menu.type === 'MENU' && menu.path"
         :to="menu.path"
         :title="collapsed ? menu.name : undefined"
         :aria-label="collapsed ? menu.name : undefined"
-        class="nav-item relative flex items-center gap-[11px] rounded-xl font-medium text-ink-muted transition-[background-color,color,box-shadow] duration-150 hover:bg-[var(--hover-surface)] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+        class="nav-item relative flex items-center gap-[11px] rounded-xl font-medium text-ink-muted transition-[color,opacity] duration-200 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
         :class="
-          collapsed ? 'h-10 w-10 justify-center text-[13px]' : 'h-[38px] px-[11px] text-[13px]'
+          collapsed
+            ? 'h-[38px] w-full justify-center text-[13px]'
+            : 'h-[38px] px-[11px] text-[13px]'
         "
         active-class="is-active text-ink"
       >
@@ -131,7 +92,7 @@ watch(
         </button>
         <div v-else class="mx-2 my-2 border-t border-line-soft"></div>
 
-        <Transition name="nav-expand" @after-enter="syncSelection" @after-leave="syncSelection">
+        <Transition name="nav-expand" @after-enter="emit('layout')" @after-leave="emit('layout')">
           <div v-if="isOpen(menu) && menu.children?.length" class="nav-branch">
             <div>
               <MenuTree
@@ -139,6 +100,7 @@ watch(
                 :collapsed="collapsed"
                 :depth="depth + 1"
                 :class="!collapsed && depth > 0 ? 'ml-2 border-l border-line-soft pl-2' : ''"
+                @layout="emit('layout')"
               />
             </div>
           </div>
@@ -149,27 +111,6 @@ watch(
 </template>
 
 <style scoped>
-.nav-root {
-  position: relative;
-  isolation: isolate;
-}
-.nav-selection {
-  position: absolute;
-  z-index: -1;
-  inset: 0 0 auto;
-  margin: 0 !important;
-  pointer-events: none;
-  border-radius: 12px;
-  border: 1px solid var(--glass-edge);
-  background: var(--pill-surface);
-  box-shadow:
-    var(--shadow-e2),
-    var(--inset-edge);
-  transition:
-    transform 420ms cubic-bezier(0.16, 1, 0.3, 1),
-    height 280ms ease,
-    opacity 180ms ease;
-}
 .nav-branch {
   display: grid;
   grid-template-rows: 1fr;
@@ -195,5 +136,13 @@ watch(
 
 .nav-item[aria-current='page'] .nav-icon {
   color: var(--brand);
+}
+.nav-icon {
+  transition: color 200ms ease;
+}
+@media (hover: hover) {
+  .nav-list:has(> li > .nav-item:hover) > li > .nav-item:not(:hover):not([aria-current='page']) {
+    opacity: 0.62;
+  }
 }
 </style>

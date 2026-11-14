@@ -14,6 +14,7 @@ import AppErrorState from '@/components/app/AppErrorState.vue'
 import AppField from '@/components/app/AppField.vue'
 import AppFilterBar from '@/components/app/AppFilterBar.vue'
 import AppInput from '@/components/app/AppInput.vue'
+import AppSelect from '@/components/app/AppSelect.vue'
 import AppPanel from '@/components/app/AppPanel.vue'
 import AppStatusTag from '@/components/app/AppStatusTag.vue'
 import { menuIcon } from '@/lib/menus'
@@ -107,6 +108,17 @@ const parentOptions = computed(() => {
       (item.node.type === 'DIRECTORY' || item.node.type === 'MENU') && !excluded.has(item.node.id),
   )
 })
+
+const parentSelectOptions = computed(() => [
+  ...(editingType.value === 'DIRECTORY' || editingType.value === 'MENU'
+    ? [{ label: '根节点', value: 0 }]
+    : []),
+  ...parentOptions.value.map((option) => ({
+    label: option.node.name + '（' + option.node.code + '）',
+    value: option.node.id,
+    depth: option.depth,
+  })),
+])
 
 async function load() {
   loading.value = true
@@ -296,6 +308,7 @@ onMounted(() => {
         v-else
         :columns="columns"
         :rows="treeRows"
+        :animation-key="nodes.map((node) => node.id).join(',')"
         :loading="loading"
         :min-width="1040"
         empty-title="暂无菜单"
@@ -384,18 +397,7 @@ onMounted(() => {
 
       <div class="space-y-1">
         <label class="text-sm font-medium" for="resource-parent">父级</label>
-        <select
-          id="resource-parent"
-          v-model.number="form.parentId"
-          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-        >
-          <option v-if="editingType === 'DIRECTORY' || editingType === 'MENU'" :value="0">
-            根节点
-          </option>
-          <option v-for="option in parentOptions" :key="option.node.id" :value="option.node.id">
-            {{ '  '.repeat(option.depth) }}{{ option.node.name }}（{{ option.node.code }}）
-          </option>
-        </select>
+        <AppSelect id="resource-parent" v-model="form.parentId" :options="parentSelectOptions" />
       </div>
 
       <div class="grid grid-cols-2 gap-4">

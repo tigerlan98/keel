@@ -285,20 +285,26 @@ onMounted(() => {
           placeholder="角色名 / 编码前缀"
       /></AppField>
       <AppField label="状态" for="role-status" class="w-[150px]"
-        ><AppSelect id="role-status" v-model="filters.status"
-          ><option value="">全部</option>
-          <option value="ENABLED">启用</option>
-          <option value="DISABLED">禁用</option></AppSelect
-        ></AppField
-      >
+        ><AppSelect
+          id="role-status"
+          v-model="filters.status"
+          :options="[
+            { label: '全部', value: '' },
+            { label: '启用', value: 'ENABLED' },
+            { label: '禁用', value: 'DISABLED' },
+          ]"
+      /></AppField>
       <AppField label="排序" for="role-sort" class="w-[180px]"
-        ><AppSelect id="role-sort" v-model="sort"
-          ><option value="sort,asc">排序 ↑</option>
-          <option value="sort,desc">排序 ↓</option>
-          <option value="createdAt,desc">创建时间 ↓</option>
-          <option value="code,asc">编码 ↑</option></AppSelect
-        ></AppField
-      >
+        ><AppSelect
+          id="role-sort"
+          v-model="sort"
+          :options="[
+            { label: '排序 ↑', value: 'sort,asc' },
+            { label: '排序 ↓', value: 'sort,desc' },
+            { label: '创建时间 ↓', value: 'createdAt,desc' },
+            { label: '编码 ↑', value: 'code,asc' },
+          ]"
+      /></AppField>
       <template #actions
         ><AppButton type="submit" :loading="loading">查询</AppButton
         ><AppButton variant="outline" :disabled="loading" @click="resetFilters"
@@ -440,14 +446,14 @@ onMounted(() => {
       <div class="grid grid-cols-2 gap-4">
         <div class="space-y-1">
           <label class="text-sm font-medium" for="role-form-status">状态</label>
-          <select
+          <AppSelect
             id="role-form-status"
             v-model="form.status"
-            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-          >
-            <option value="ENABLED">启用</option>
-            <option value="DISABLED">禁用</option>
-          </select>
+            :options="[
+              { label: '启用', value: 'ENABLED' },
+              { label: '禁用', value: 'DISABLED' },
+            ]"
+          />
         </div>
         <div class="space-y-1">
           <label class="text-sm font-medium" for="role-form-sort">排序</label>

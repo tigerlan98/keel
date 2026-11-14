@@ -148,8 +148,6 @@ test('工作台默认路由、真实样本与时间范围切换', async ({ page 
   await page.goto('/')
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('heading', { name: /超级管理员/ })).toBeVisible()
-  await expect(page.getByText(/近 30 天最新 60 条登录记录 \/ 90 条操作记录/)).toBeVisible()
-  await expect(page.getByText('完整记录请查看日志。')).toBeVisible()
   await page.getByRole('button', { name: '7 天', exact: true }).click()
   await expect(page.getByRole('button', { name: '7 天', exact: true })).toHaveAttribute(
     'aria-pressed',
@@ -211,10 +209,10 @@ test('角色表格加载骨架、编辑弹窗与减少动画偏好', async ({ pa
   })
   await page.setViewportSize({ width: 1600, height: 1000 })
   await page.goto('/iam/roles')
-  await expect(page.locator('.table-loading-bar')).toBeVisible()
+  await expect(page.locator('.app-data-table')).toHaveAttribute('aria-busy', 'true')
   await expect(page.locator('.table-skeleton').first()).toBeVisible()
   release()
-  await expect(page.locator('.table-loading-bar')).toHaveCount(0)
+  await expect(page.locator('.app-data-table')).toHaveAttribute('aria-busy', 'false')
   await expect(page.locator('tbody')).toContainText('OPS_ADMIN')
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.getByRole('button', { name: '新增角色' }).click()
@@ -338,6 +336,135 @@ test('顶栏外观设置支持深色持久化与跟随系统', async ({ page }) 
   await expect(page.locator('html')).toHaveClass('dark')
   await dialog.getByRole('button', { name: '浅色', exact: true }).click()
   await expect(page.locator('html')).not.toHaveClass('dark')
+})
+
+test('同一侧栏高亮连续跨工作台与业务菜单滑动，轨迹对齐参考项目', async ({ page }) => {
+  await mockUi(page)
+  await page.setViewportSize({ width: 1600, height: 1000 })
+  await page.goto('/')
+  const thumb = page.locator('.app-rail .nav-selection')
+  await expect(thumb).toHaveCount(1)
+  await expect(thumb).toHaveCSS('opacity', '1')
+  await thumb.evaluate((element) => element.setAttribute('data-continuous', 'true'))
+  for (const label of ['用户管理', '角色管理', '工作台']) {
+    const start = await thumb.boundingBox()
+    await page.getByRole('link', { name: label, exact: true }).focus()
+    await page.keyboard.press('Enter')
+    await expect
+      .poll(() =>
+        thumb.evaluate((element) =>
+          element.getAnimations().some((animation) => animation.id === 'navigation-slide'),
+        ),
+      )
+      .toBe(true)
+    const sample = await thumb.evaluate((element, startY) => {
+      const animation = element.getAnimations().find((item) => item.id === 'navigation-slide')!
+      animation.pause()
+      animation.currentTime = 130
+      const actual = element.getBoundingClientRect().top
+      const target = element
+        .parentElement!.querySelector('.nav-item[aria-current="page"]')!
+        .getBoundingClientRect().top
+      const duration = animation.effect!.getTiming().duration
+      animation.finish()
+      return { actual, expected: startY + (target - startY) * (1 - 0.75 ** 5), duration }
+    }, start!.y)
+    expect(sample.duration).toBe(520)
+    expect(Math.abs(sample.actual - sample.expected)).toBeLessThan(1)
+    await expect(thumb).toHaveAttribute('data-continuous', 'true')
+  }
+})
+
+test('列表刷新保留旧行，同一批记录不重播，换页数据按参考节奏显现', async ({ page }) => {
+  await mockUi(page)
+  await page.goto('/iam/users')
+  await expect(page.locator('tbody')).toContainText('admin')
+  await page
+    .locator('tbody tr')
+    .first()
+    .evaluate((element) => element.setAttribute('data-retained', 'true'))
+  let release: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/v1/admin/iam/users*', async (route) => {
+    await pending
+    const fresh = new URL(route.request().url()).searchParams.has('username')
+    const items = fresh
+      ? Array.from({ length: 18 }, (_, index) => ({
+          ...users[0],
+          id: index + 101,
+          username: `fresh-${index}`,
+        }))
+      : users
+    await route.fulfill(ok({ items, total: items.length, page: 1, size: 20 }))
+  })
+  await page.getByRole('button', { name: '刷新', exact: true }).click()
+  await expect(page.locator('.app-data-table')).toHaveAttribute('aria-busy', 'true')
+  await expect(page.locator('.table-skeleton')).toHaveCount(0)
+  await expect(page.locator('tbody tr').first()).toHaveAttribute('data-retained', 'true')
+  await expect(page.locator('tbody tr').first()).toHaveCSS('opacity', '0.55')
+  release()
+  await expect(page.locator('.app-data-table')).toHaveAttribute('aria-busy', 'false')
+  expect(
+    await page
+      .locator('tbody tr')
+      .first()
+      .evaluate((element) => element.getAnimations().length),
+  ).toBe(0)
+  await page.getByLabel('用户名', { exact: true }).fill('fresh')
+  await page.getByRole('button', { name: '查询', exact: true }).click()
+  await expect(page.locator('tbody tr').first()).toContainText('fresh-0')
+  const timings = await page.locator('tbody tr').evaluateAll((elements) =>
+    elements.flatMap((element) =>
+      element
+        .getAnimations()
+        .filter((animation) => animation.id === 'data-row-enter')
+        .map((animation) => animation.effect!.getTiming()),
+    ),
+  )
+  expect(timings).toHaveLength(14)
+  expect(timings.every((timing) => timing.duration === 500)).toBe(true)
+  expect(timings.map((timing) => timing.delay)).toEqual(
+    Array.from({ length: 14 }, (_, index) => index * 25),
+  )
+})
+
+test('页面按标题、筛选、表格顺序进入，连续切换后复位滚动和样式', async ({ page }) => {
+  await mockUi(page)
+  await page.setViewportSize({ width: 1600, height: 600 })
+  await page.goto('/iam/users')
+  await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible()
+  const timings = await page.locator('.route-page').evaluate((element) => ({
+    page: element
+      .getAnimations()
+      .find((animation) => animation.id === 'page-enter')
+      ?.effect?.getTiming(),
+    sections: [...element.querySelectorAll('.page-reveal')].map((section) =>
+      section
+        .getAnimations()
+        .find((animation) => animation.id === 'page-section-enter')
+        ?.effect?.getTiming(),
+    ),
+  }))
+  expect(timings.page?.duration).toBe(620)
+  expect(timings.sections.map((timing) => timing?.delay)).toEqual([40, 90, 140])
+  await page.locator('.app-main').evaluate((element) => {
+    element.scrollTop = 200
+  })
+  await page.getByRole('link', { name: '角色管理', exact: true }).click()
+  await page.getByRole('link', { name: '菜单管理', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '菜单管理' })).toBeVisible()
+  await expect
+    .poll(() => page.locator('.app-main').evaluate((element) => element.scrollTop))
+    .toBe(0)
+  await page.locator('.route-page').evaluate(async (element) => {
+    await Promise.allSettled(
+      element.getAnimations({ subtree: true }).map((animation) => animation.finished),
+    )
+  })
+  await expect(page.locator('.route-page')).toHaveCSS('transform', 'none')
+  await expect(page.locator('.route-page')).toHaveCSS('opacity', '1')
 })
 
 test('工作台首次回弹入场只播一次，返回与刷新保持图表节点', async ({ page }) => {

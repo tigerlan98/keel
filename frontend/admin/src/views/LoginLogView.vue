@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { Eye, RefreshCw } from '@lucide/vue'
+import AppButton from '@/components/app/AppButton.vue'
+import AppDataTable from '@/components/app/AppDataTable.vue'
+import AppErrorState from '@/components/app/AppErrorState.vue'
+import AppField from '@/components/app/AppField.vue'
+import AppFilterBar from '@/components/app/AppFilterBar.vue'
+import AppInput from '@/components/app/AppInput.vue'
+import AppPagination from '@/components/app/AppPagination.vue'
+import AppPanel from '@/components/app/AppPanel.vue'
+import AppSelect from '@/components/app/AppSelect.vue'
+import AppStatusTag from '@/components/app/AppStatusTag.vue'
+
+import { onMounted, reactive, ref } from 'vue'
 
 import { ApiError } from '@/api/http'
 import { fetchLoginLog, fetchLoginLogs } from '@/api/logs'
@@ -28,7 +40,17 @@ const items = ref<LoginLogSummary[]>([])
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size.value)))
+const columns = [
+  { key: 'createdAt', label: '时间' },
+  { key: 'username', label: '登录名' },
+  { key: 'action', label: '动作' },
+  { key: 'loginType', label: '账号体系' },
+  { key: 'device', label: '终端' },
+  { key: 'ip', label: 'IP' },
+  { key: 'success', label: '结果' },
+  { key: 'failureReason', label: '失败原因' },
+  { key: 'actions', label: '操作', align: 'right' as const, sticky: true, width: '80px' },
+]
 
 const detailOpen = ref(false)
 const detailLoading = ref(false)
@@ -77,23 +99,14 @@ function resetFilters() {
   void load()
 }
 
-function changeSize() {
+function changeSize(value: number) {
+  size.value = value
   page.value = 1
   void load()
 }
-
-function previousPage() {
-  if (page.value > 1) {
-    page.value -= 1
-    void load()
-  }
-}
-
-function nextPage() {
-  if (page.value < totalPages.value) {
-    page.value += 1
-    void load()
-  }
+function changePage(value: number) {
+  page.value = value
+  void load()
 }
 
 async function openDetail(log: LoginLogSummary) {
@@ -126,193 +139,113 @@ onMounted(() => {
 <template>
   <PageHeader title="登录日志" description="记录登录、登出与登录失败，仅支持查询。" />
 
-  <div class="mt-6 rounded-xl border bg-card">
-    <form class="flex flex-wrap items-end gap-3 border-b p-4" @submit.prevent="search">
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="login-start">开始时间</label>
-        <input
-          id="login-start"
-          v-model="filters.startTime"
-          type="datetime-local"
-          class="flex h-9 w-52 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        />
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="login-end">结束时间</label>
-        <input
-          id="login-end"
-          v-model="filters.endTime"
-          type="datetime-local"
-          class="flex h-9 w-52 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        />
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="login-username">登录名</label>
-        <input
+  <div class="mt-5 space-y-4">
+    <AppFilterBar @submit="search"
+      ><AppField label="开始时间" for="login-start" class="w-[220px]"
+        ><AppInput id="login-start" v-model="filters.startTime" type="datetime-local" /></AppField
+      ><AppField label="结束时间" for="login-end" class="w-[220px]"
+        ><AppInput id="login-end" v-model="filters.endTime" type="datetime-local" /></AppField
+      ><AppField label="登录名" for="login-username" class="w-[180px]"
+        ><AppInput
           id="login-username"
           v-model="filters.username"
-          type="text"
           maxlength="64"
-          placeholder="登录名前缀"
-          class="flex h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        />
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="login-action">动作</label>
-        <select
+          type="text"
+          placeholder="登录名前缀" /></AppField
+      ><AppField label="动作" for="login-action" class="w-[180px]"
+        ><AppSelect
           id="login-action"
           v-model="filters.action"
-          class="flex h-9 w-36 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        >
-          <option value="">全部</option>
-          <option v-for="action in ACTIONS" :key="action" :value="action">{{ action }}</option>
-        </select>
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="login-success">结果</label>
-        <select
+          :options="[
+            { label: '全部', value: '' },
+            ...ACTIONS.map((value) => ({ label: value, value })),
+          ]" /></AppField
+      ><AppField label="结果" for="login-success" class="w-[130px]"
+        ><AppSelect
           id="login-success"
           v-model="filters.success"
-          class="flex h-9 w-28 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        >
-          <option value="">全部</option>
-          <option value="true">成功</option>
-          <option value="false">失败</option>
-        </select>
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="login-ip">IP</label>
-        <input
-          id="login-ip"
-          v-model="filters.ip"
-          type="text"
-          maxlength="64"
-          class="flex h-9 w-36 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring"
-        />
-      </div>
-
-      <button
-        type="submit"
-        class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-        :disabled="loading"
+          :options="[
+            { label: '全部', value: '' },
+            { label: '成功', value: 'true' },
+            { label: '失败', value: 'false' },
+          ]" /></AppField
+      ><AppField label="IP" for="login-ip" class="w-[150px]"
+        ><AppInput id="login-ip" v-model="filters.ip" type="text" maxlength="64"
+      /></AppField>
+      <template #actions
+        ><AppButton type="submit" :loading="loading">查询</AppButton
+        ><AppButton variant="outline" :disabled="loading" @click="resetFilters"
+          >重置</AppButton
+        ></template
       >
-        查询
-      </button>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center justify-center rounded-md border border-input px-4 text-sm font-medium transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-        :disabled="loading"
-        @click="resetFilters"
+    </AppFilterBar>
+    <AppPanel>
+      <template #header
+        ><div class="flex items-center gap-2.5">
+          <span class="section-label">登录日志</span
+          ><span class="text-[11.5px] text-ink-soft">共 {{ total }} 条</span>
+        </div></template
       >
-        重置
-      </button>
-    </form>
-
-    <div
-      v-if="error"
-      class="flex items-center justify-between gap-3 border-b bg-destructive/5 px-4 py-3 text-sm text-destructive"
-    >
-      <span>{{ error }}</span>
-      <button type="button" class="shrink-0 underline-offset-4 hover:underline" @click="load">
-        重试
-      </button>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[900px] text-sm">
-        <thead class="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-          <tr>
-            <th class="px-4 py-3 font-medium">时间</th>
-            <th class="px-4 py-3 font-medium">登录名</th>
-            <th class="px-4 py-3 font-medium">动作</th>
-            <th class="px-4 py-3 font-medium">账号体系</th>
-            <th class="px-4 py-3 font-medium">终端</th>
-            <th class="px-4 py-3 font-medium">IP</th>
-            <th class="px-4 py-3 font-medium">结果</th>
-            <th class="px-4 py-3 font-medium">失败原因</th>
-            <th class="px-4 py-3 text-right font-medium">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="9" class="px-4 py-10 text-center text-muted-foreground">加载中...</td>
-          </tr>
-          <tr v-else-if="items.length === 0">
-            <td colspan="9" class="px-4 py-10 text-center text-muted-foreground">暂无数据</td>
-          </tr>
-          <template v-else>
-            <tr v-for="log in items" :key="log.id" class="border-b last:border-0">
-              <td class="px-4 py-3 text-muted-foreground">{{ formatDateTime(log.createdAt) }}</td>
-              <td class="px-4 py-3">{{ log.username }}</td>
-              <td class="px-4 py-3 font-mono text-xs">{{ log.action }}</td>
-              <td class="px-4 py-3 text-muted-foreground">{{ log.loginType }}</td>
-              <td class="px-4 py-3 text-muted-foreground">{{ log.device }}</td>
-              <td class="px-4 py-3 text-muted-foreground">{{ log.ip || '-' }}</td>
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                  :class="
-                    log.success
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-destructive/10 text-destructive'
-                  "
-                >
-                  {{ log.success ? '成功' : '失败' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 font-mono text-xs text-muted-foreground">
-                {{ log.failureReason || '-' }}
-              </td>
-              <td class="px-4 py-3 text-right">
-                <button type="button" class="text-primary hover:underline" @click="openDetail(log)">
-                  详情
-                </button>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm">
-      <span class="text-muted-foreground">共 {{ total }} 条</span>
-      <div class="flex items-center gap-2">
-        <label class="flex items-center gap-1 text-muted-foreground">
-          每页
-          <select
-            v-model.number="size"
-            class="h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring"
-            @change="changeSize"
-          >
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-            <option :value="50">50</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          class="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm disabled:pointer-events-none disabled:opacity-40"
-          :disabled="page <= 1 || loading"
-          @click="previousPage"
+      <template #tools
+        ><AppButton
+          variant="outline"
+          size="icon-sm"
+          aria-label="刷新"
+          title="刷新"
+          :loading="loading"
+          @click="load"
+          ><RefreshCw :size="14" /></AppButton
+      ></template>
+      <AppErrorState v-if="error" :message="error" @retry="load" />
+      <AppDataTable v-else :columns="columns" :rows="items" :loading="loading" :min-width="1100">
+        <template #cell-createdAt="{ row }"
+          ><span class="tnum text-[12px] text-ink-soft">{{
+            formatDateTime(row.createdAt)
+          }}</span></template
         >
-          上一页
-        </button>
-        <span class="min-w-16 text-center text-muted-foreground">{{ page }} / {{ totalPages }}</span>
-        <button
-          type="button"
-          class="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm disabled:pointer-events-none disabled:opacity-40"
-          :disabled="page >= totalPages || loading"
-          @click="nextPage"
+        <template #cell-username="{ row }"
+          ><span class="font-semibold text-ink">{{ row.username }}</span></template
         >
-          下一页
-        </button>
-      </div>
-    </div>
+        <template #cell-action="{ row }"
+          ><span class="code-chip">{{ row.action }}</span></template
+        >
+        <template #cell-loginType="{ row }"
+          ><span class="text-ink-muted">{{ row.loginType }}</span></template
+        >
+        <template #cell-device="{ row }"
+          ><span class="text-ink-muted">{{ row.device }}</span></template
+        >
+        <template #cell-ip="{ row }"
+          ><span class="text-[12px] text-ink-soft">{{ row.ip || '—' }}</span></template
+        >
+        <template #cell-success="{ row }"
+          ><AppStatusTag
+            :tone="row.success ? 'success' : 'danger'"
+            :label="row.success ? '成功' : '失败'"
+        /></template>
+        <template #cell-failureReason="{ row }"
+          ><span class="text-[12px] text-ink-muted">{{ row.failureReason || '—' }}</span></template
+        >
+        <template #cell-actions="{ row }"
+          ><AppButton
+            variant="ghost"
+            size="icon-sm"
+            aria-label="详情"
+            title="详情"
+            @click="openDetail(row)"
+            ><Eye :size="14" /></AppButton
+        ></template>
+      </AppDataTable>
+      <template v-if="!error && total > 0" #footer
+        ><AppPagination
+          :page="page"
+          :page-size="size"
+          :total="total"
+          :loading="loading"
+          @update:page="changePage"
+          @update:page-size="changeSize"
+      /></template>
+    </AppPanel>
   </div>
 
   <AppDialog :open="detailOpen" title="登录日志详情" @close="detailOpen = false">
