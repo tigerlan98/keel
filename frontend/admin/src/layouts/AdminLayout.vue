@@ -37,7 +37,7 @@ const mainContent = useTemplateRef<InstanceType<typeof globalThis.HTMLElement>>(
 const displayName = computed(() => auth.user?.nickname || auth.user?.username || '未登录')
 const menuTrail = computed(() => findMenuTrail(auth.menus, route.path))
 const groupTitle = computed(() =>
-  menuTrail.value.length > 1 ? String(menuTrail.value[0]?.name ?? '管理端') : '管理端',
+  menuTrail.value.length > 1 ? String(menuTrail.value[0]?.name ?? '') : '',
 )
 const pageTitle = computed(() =>
   String(route.meta.title ?? menuTrail.value.at(-1)?.name ?? '管理端'),
@@ -141,8 +141,11 @@ onUnmounted(() => {
           </button>
 
           <div class="flex min-w-0 items-center gap-1.5 text-[12px]">
-            <span class="hidden whitespace-nowrap text-ink-faint md:inline">{{ groupTitle }}</span>
+            <span v-if="groupTitle" class="hidden whitespace-nowrap text-ink-faint md:inline">
+              {{ groupTitle }}
+            </span>
             <ChevronRight
+              v-if="groupTitle"
               :size="12"
               class="hidden shrink-0 text-ink-faint md:block"
               aria-hidden="true"

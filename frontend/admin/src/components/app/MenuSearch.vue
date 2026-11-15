@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import type { MenuNode } from '@/api/types'
 import AppDialog from '@/components/app/AppDialog.vue'
 import AppInput from '@/components/app/AppInput.vue'
+import { vPress } from '@/directives/press'
 import { menuIcon } from '@/lib/menus'
 import { useAuthStore } from '@/stores/auth'
 
@@ -63,6 +64,7 @@ onUnmounted(() => globalThis.document.removeEventListener('keydown', handleKeydo
 
 <template>
   <button
+    v-press
     type="button"
     class="menu-search-trigger app-surface flex h-9 w-9 items-center justify-center gap-2 rounded-xl px-2 text-[12.5px] text-ink-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 xl:w-60 xl:justify-start xl:px-3"
     aria-label="搜索菜单"

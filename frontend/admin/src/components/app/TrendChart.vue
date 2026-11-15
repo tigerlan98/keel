@@ -33,6 +33,7 @@ const points = computed(() =>
   })),
 )
 const shown = shallowRef<{ x: number; y: number }[]>([])
+const latestPoint = computed(() => shown.value.at(-1))
 function finishHidden(): void {
   if (!globalThis.document.hidden) return
   globalThis.cancelAnimationFrame(frame)
@@ -165,6 +166,17 @@ const labelIndexes = computed(() =>
       stroke-width="2"
       stroke-linecap="round"
     />
+    <g v-if="latestPoint" class="trend-endpoint" aria-hidden="true">
+      <circle :cx="latestPoint.x" :cy="latestPoint.y" r="8" fill="var(--brand-soft)" />
+      <circle
+        :cx="latestPoint.x"
+        :cy="latestPoint.y"
+        r="3"
+        fill="var(--surface-solid)"
+        stroke="currentColor"
+        stroke-width="1.5"
+      />
+    </g>
     <g v-for="(point, index) in points" :key="index">
       <circle :cx="point.x" :cy="point.y" r="7" fill="transparent">
         <title>{{ labels[index] }}：{{ values[index] }} 次</title>

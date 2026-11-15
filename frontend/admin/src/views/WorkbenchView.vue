@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Activity, ArrowRight, FileClock, RefreshCw } from '@lucide/vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { format, startOfDay, startOfHour, subDays, subHours } from 'date-fns'
 import { ApiError } from '@/api/http'
@@ -13,7 +13,7 @@ import AppStatusTag from '@/components/app/AppStatusTag.vue'
 import TrendChart from '@/components/app/TrendChart.vue'
 import { formatDateTime } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
-import { firstTimeInSession, motionSkipped, settleFrames } from '@/lib/motion'
+import { firstTimeInSession, motionSkipped, settleFrames, slideThumb } from '@/lib/motion'
 
 const auth = useAuthStore()
 const grid = ref<InstanceType<typeof globalThis.HTMLElement> | null>(null)
@@ -23,6 +23,45 @@ function finishHidden(): void {
   if (globalThis.document.hidden) entrances.forEach((animation) => animation.finish())
 }
 const range = ref<24 | 7 | 30>(24)
+const rangeOptions = [24, 7, 30] as const
+const rangeSwitch = ref<InstanceType<typeof globalThis.HTMLElement> | null>(null)
+const rangeThumb = ref<InstanceType<typeof globalThis.HTMLElement> | null>(null)
+let rangeAnimation: InstanceType<typeof globalThis.Animation> | undefined
+let rangeObserver: InstanceType<typeof globalThis.ResizeObserver> | undefined
+
+function syncRange(instant = false): void {
+  const button = rangeSwitch.value?.querySelector<InstanceType<typeof globalThis.HTMLElement>>(
+    'button[aria-pressed="true"]',
+  )
+  if (!button || !rangeThumb.value) return
+  rangeAnimation = slideThumb(rangeThumb.value, button, instant, rangeAnimation, 'x')
+}
+
+function handleRangeKey(event: InstanceType<typeof globalThis.KeyboardEvent>): void {
+  const index = rangeOptions.indexOf(range.value)
+  const next =
+    event.key === 'ArrowRight'
+      ? (index + 1) % rangeOptions.length
+      : event.key === 'ArrowLeft'
+        ? (index + rangeOptions.length - 1) % rangeOptions.length
+        : event.key === 'Home'
+          ? 0
+          : event.key === 'End'
+            ? rangeOptions.length - 1
+            : -1
+  if (next < 0) return
+  event.preventDefault()
+  range.value = rangeOptions[next]!
+  void nextTick(() =>
+    rangeSwitch.value
+      ?.querySelector<InstanceType<typeof globalThis.HTMLButtonElement>>(
+        'button[aria-pressed="true"]',
+      )
+      ?.focus(),
+  )
+}
+
+watch(range, () => nextTick(() => syncRange()))
 const now = ref(new Date())
 const loginLogs = ref<LoginLogSummary[]>([])
 const operationLogs = ref<OperationLogSummary[]>([])
@@ -179,6 +218,12 @@ async function load(): Promise<void> {
 }
 onMounted(() => {
   void load()
+  syncRange(true)
+  rangeObserver = new globalThis.ResizeObserver(() => syncRange(true))
+  if (rangeSwitch.value) {
+    rangeObserver.observe(rangeSwitch.value)
+    rangeSwitch.value.querySelectorAll('button').forEach((button) => rangeObserver?.observe(button))
+  }
   globalThis.document.addEventListener('visibilitychange', finishHidden)
   if (motionSkipped()) return
   const intro = firstTimeInSession('workbench')
@@ -217,6 +262,8 @@ onMounted(() => {
   })
 })
 onUnmounted(() => {
+  rangeObserver?.disconnect()
+  rangeAnimation?.cancel()
   globalThis.document.removeEventListener('visibilitychange', finishHidden)
   globalThis.cancelAnimationFrame(entranceFrame)
   entrances.forEach((animation) => animation.cancel())
@@ -239,12 +286,20 @@ onUnmounted(() => {
       <section class="workbench-card pulse-card" aria-label="登录脉搏">
         <header class="card-heading">
           <h2>登录脉搏</h2>
-          <div class="range-switch" role="group" aria-label="时间范围">
+          <div
+            ref="rangeSwitch"
+            class="range-switch"
+            role="group"
+            aria-label="时间范围"
+            @keydown="handleRangeKey"
+          >
+            <span ref="rangeThumb" class="range-thumb" aria-hidden="true"></span>
             <button
-              v-for="option in [24, 7, 30] as const"
+              v-for="option in rangeOptions"
               :key="option"
               type="button"
               :aria-pressed="range === option"
+              :tabindex="range === option ? 0 : -1"
               @click="range = option"
             >
               {{ option === 24 ? '24 小时' : `${option} 天` }}
@@ -284,7 +339,7 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="card-actions">
-            <RouterLink to="/audit/login-logs" class="dashboard-link"
+            <RouterLink to="/audit/login-logs" class="dashboard-link primary"
               >查看登录日志 <ArrowRight :size="14" /></RouterLink
             ><AppButton variant="outline" :loading="loading" @click="load"
               ><RefreshCw :size="14" />刷新</AppButton

@@ -48,14 +48,12 @@ function handleOpenAutoFocus(event: InstanceType<typeof globalThis.Event>): void
     <DialogPortal>
       <DialogOverlay class="dialog-overlay fixed inset-0 z-[100] bg-[var(--overlay-bg)]" />
       <DialogContent
-        class="dialog-content fixed left-1/2 top-1/2 z-[100] flex max-h-[85dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[20px] border border-line-strong bg-surface text-ink shadow-[var(--shadow-e3)] focus:outline-none"
+        class="dialog-content fixed left-1/2 top-1/2 z-[100] flex max-h-[calc(100dvh-48px)] w-[calc(100%-3rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[24px] bg-surface text-ink focus:outline-none"
         :class="sizeClass"
         @open-auto-focus="handleOpenAutoFocus"
       >
-        <header
-          class="flex items-center justify-between gap-4 border-b border-line-soft px-5 py-3.5"
-        >
-          <DialogTitle class="text-[15px] font-semibold tracking-[-0.01em] text-ink">
+        <header class="flex shrink-0 items-start justify-between gap-4 px-[22px] pb-1.5 pt-5">
+          <DialogTitle class="text-[16px] font-bold tracking-[-0.015em] text-ink">
             {{ title }}
           </DialogTitle>
           <button
@@ -68,13 +66,13 @@ function handleOpenAutoFocus(event: InstanceType<typeof globalThis.Event>): void
           </button>
         </header>
 
-        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        <div class="min-h-0 flex-1 overflow-y-auto px-[22px] pb-5 pt-3.5">
           <slot />
         </div>
 
         <footer
           v-if="$slots.footer"
-          class="flex flex-wrap items-center justify-end gap-2 border-t border-line-soft px-5 py-3.5"
+          class="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line-soft px-[22px] py-3.5"
         >
           <slot name="footer" />
         </footer>

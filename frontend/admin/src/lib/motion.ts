@@ -155,6 +155,7 @@ export function slideThumb(
   target: MotionElement,
   instant: boolean,
   previous?: MotionAnimation,
+  axis: 'x' | 'y' = 'y',
 ): MotionAnimation | undefined {
   const parent = thumb.offsetParent as MotionElement | null
   if (!parent) return
@@ -162,28 +163,35 @@ export function slideThumb(
   if (!pr.width || !pr.height) return
   const tr = target.getBoundingClientRect()
   const old = thumb.getBoundingClientRect()
-  const scale = parent.offsetHeight ? pr.height / parent.offsetHeight : 1
+  const horizontal = axis === 'x'
+  const size = horizontal ? 'width' : 'height'
+  const edge = horizontal ? 'left' : 'top'
+  const border = horizontal ? parent.clientLeft : parent.clientTop
+  const scroll = horizontal ? parent.scrollLeft : parent.scrollTop
+  const extent = horizontal ? parent.offsetWidth : parent.offsetHeight
+  const scale = extent ? pr[size] / extent : 1
   const factor = scale > 0.01 ? scale : 1
-  const fromY = (old.top - pr.top) / factor - parent.clientTop + parent.scrollTop
-  const fromHeight = old.height / factor
-  const toY = (tr.top - pr.top) / factor - parent.clientTop + parent.scrollTop
-  const toHeight = tr.height / factor
+  const from = (old[edge] - pr[edge]) / factor - border + scroll
+  const fromSize = old[size] / factor
+  const to = (tr[edge] - pr[edge]) / factor - border + scroll
+  const toSize = tr[size] / factor
+  const translate = horizontal ? 'translateX' : 'translateY'
   previous?.cancel()
-  thumb.style.transform = `translateY(${toY}px)`
-  thumb.style.height = `${toHeight}px`
+  thumb.style.transform = `${translate}(${to}px)`
+  thumb.style[size] = `${toSize}px`
   if (instant || motionSkipped()) return
   return animateMotion(
     thumb,
     motionFrames(
       (t) => ({
-        transform: `translateY(${fromY + (toY - fromY) * t}px)`,
-        height: `${fromHeight + (toHeight - fromHeight) * t}px`,
+        transform: `${translate}(${from + (to - from) * t}px)`,
+        [size]: `${fromSize + (toSize - fromSize) * t}px`,
       }),
       'glide',
     ),
     520,
     0,
-    'navigation-slide',
+    horizontal ? 'segment-slide' : 'navigation-slide',
   )
 }
 

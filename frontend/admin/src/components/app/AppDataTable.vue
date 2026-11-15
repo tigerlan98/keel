@@ -76,7 +76,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-data-table relative overflow-x-auto" :aria-busy="loading">
+  <!-- 裁剪行入场位移，避免横向滚动容器产生短暂的纵向滚动条。 -->
+  <div class="app-data-table relative overflow-x-auto overflow-y-hidden" :aria-busy="loading">
     <span v-if="loading" class="sr-only" role="status">正在加载数据</span>
     <table class="data-table" :style="{ minWidth: `${minWidth}px` }">
       <thead>

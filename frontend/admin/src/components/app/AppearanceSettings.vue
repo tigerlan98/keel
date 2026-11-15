@@ -3,6 +3,7 @@ import { Contrast, Monitor, Moon, Sun } from '@lucide/vue'
 import { ref } from 'vue'
 import AppButton from './AppButton.vue'
 import AppDialog from './AppDialog.vue'
+import { vPress } from '@/directives/press'
 import { setTheme, themeMode } from '@/lib/appearance'
 
 const open = ref(false)
@@ -14,6 +15,7 @@ const options = [
 </script>
 <template>
   <button
+    v-press
     type="button"
     class="appearance-trigger topbar-icon-button inline-flex"
     aria-label="外观设置"

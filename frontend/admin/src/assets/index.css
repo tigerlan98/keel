@@ -55,7 +55,7 @@
   --surface-solid: #fbfcfc;
   --surface-edge: rgba(46, 58, 62, 0.11);
   --line-soft: rgba(46, 58, 62, 0.085);
-  --line-strong: rgba(46, 58, 62, 0.14);
+  --line-strong: rgba(46, 58, 62, 0.11);
   --shadow-e1: 0 1px 2px rgba(46, 58, 62, 0.05), 0 5px 14px rgba(46, 58, 62, 0.04);
   --shadow-e2: 0 1px 3px rgba(46, 58, 62, 0.06), 0 12px 30px rgba(46, 58, 62, 0.055);
   --shadow-e3: 0 2px 6px rgba(46, 58, 62, 0.07), 0 22px 50px rgba(46, 58, 62, 0.08);
@@ -63,6 +63,9 @@
   --pill-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.93), rgba(246, 251, 249, 0.62));
   --glass-edge: rgba(255, 255, 255, 0.88);
   --inset-edge: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  --inset-edge-strong: inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  --groove-edge: rgba(255, 255, 255, 0.7);
+  --groove-inset: inset 0 1px 0 rgba(255, 255, 255, 0.46);
   --rail-surface: rgba(250, 251, 250, 0.92);
   --topbar-surface: rgba(246, 248, 247, 0.6);
   --input-surface: rgba(255, 255, 255, 0.78);
@@ -74,7 +77,7 @@
     linear-gradient(145deg, #fbfdf8, #fbfcfc);
   --action-bg: #101418;
   --action-ink: #fff;
-  --overlay-bg: rgba(16, 20, 24, 0.25);
+  --overlay-bg: rgba(16, 20, 24, 0.26);
   --bar-surface: linear-gradient(#cbd0d0, #dce0df);
   --ring-inactive: #dce3dd;
 }
@@ -127,16 +130,19 @@
   --canvas: #121517;
   --canvas-deep: #090b0c;
   --surface-solid: #1b1f21;
-  --surface-edge: rgba(245, 244, 239, 0.1);
-  --line-soft: rgba(245, 244, 239, 0.1);
-  --line-strong: rgba(245, 244, 239, 0.18);
-  --shadow-e1: 0 1px 2px rgba(0, 0, 0, 0.2), 0 10px 30px -24px rgba(0, 0, 0, 0.5);
-  --shadow-e2: 0 2px 6px rgba(0, 0, 0, 0.24), 0 18px 44px -28px rgba(0, 0, 0, 0.55);
-  --shadow-e3: 0 18px 60px -26px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.24);
+  --surface-edge: rgba(255, 255, 255, 0.1);
+  --line-soft: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.1);
+  --shadow-e1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 5px 14px rgba(0, 0, 0, 0.2);
+  --shadow-e2: 0 1px 3px rgba(0, 0, 0, 0.32), 0 12px 30px rgba(0, 0, 0, 0.28);
+  --shadow-e3: 0 2px 6px rgba(0, 0, 0, 0.36), 0 22px 50px rgba(0, 0, 0, 0.42);
   --panel-surface: linear-gradient(145deg, rgba(29, 33, 36, 0.98), rgba(25, 29, 31, 0.96));
   --pill-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
   --glass-edge: rgba(255, 255, 255, 0.1);
   --inset-edge: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --inset-edge-strong: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --groove-edge: rgba(255, 255, 255, 0.07);
+  --groove-inset: inset 0 1px 2px rgba(0, 0, 0, 0.28);
   --rail-surface: rgba(22, 26, 28, 0.94);
   --topbar-surface: rgba(22, 26, 28, 0.6);
   --input-surface: rgba(255, 255, 255, 0.04);
@@ -228,6 +234,14 @@
 }
 
 @layer components {
+  .dialog-overlay {
+    backdrop-filter: blur(3px);
+  }
+
+  .dialog-content {
+    box-shadow: var(--inset-edge), var(--shadow-e3);
+  }
+
   .app-surface {
     background: var(--pill-surface);
     border: 1px solid var(--glass-edge);
@@ -239,7 +253,7 @@
     @apply overflow-hidden rounded-[20px];
     background: var(--panel-surface);
     border: 1px solid var(--surface-edge);
-    box-shadow: var(--shadow-e1), var(--inset-edge);
+    box-shadow: var(--inset-edge), var(--shadow-e1);
   }
 
   .section-label {
@@ -329,6 +343,10 @@
       background: var(--surface-solid);
       backdrop-filter: none;
     }
+
+    .dialog-overlay {
+      backdrop-filter: none;
+    }
   }
 }
 
@@ -355,7 +373,7 @@
 }
 
 .dialog-content form :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
-  border-radius: 10px;
+  border-radius: 12px;
   border-color: var(--line-strong);
   background: var(--input-surface);
   font-size: 13px;
@@ -371,7 +389,7 @@
 }
 
 .dialog-content footer button {
-  border-radius: 999px;
+  border-radius: 12px;
   font-size: 13px;
 }
 
