@@ -2,7 +2,7 @@
 
 > 适用范围：`docs/design/03-数据库设计.md`、所有表结构与迁移评审
 > 状态：v0.3（评审修订）
-> 更新：2026-11-12
+> 更新：2026-11-15
 > 关联：`docs/design/02-技术选型与整体架构.md`
 
 ## 1. 目的与基本原则
@@ -83,7 +83,8 @@
 
 - 可变业务表必须有 `created_at`、`created_by`、`updated_at`、`updated_by`。
 - 追加型日志表只需 `created_at`。
-- `version INT NOT NULL DEFAULT 0` 仅用于用户、角色、资源、系统参数。
+- `version INT NOT NULL DEFAULT 0` 用于用户、角色、资源、系统参数与部门。
+- 部门 version 扩展已随设计确认，依据见 [02 ADR-014](../design/02-技术选型与整体架构.md) 与 [07](../design/07-部门管理与用户页面调整设计.md)。
 - 禁止全局逻辑删除；用户/角色用 `status` 控制，菜单/配置硬删除。
 - 状态值统一 `ENABLED` / `DISABLED`；登录锁定由 Redis 计数控制，不入库。
 - 审计字段由 `MetaObjectHandler` 填充。

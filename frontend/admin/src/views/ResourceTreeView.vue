@@ -7,6 +7,7 @@ import {
   CircleCheck,
   Pencil,
   RefreshCw,
+  Search,
 } from '@lucide/vue'
 import AppButton from '@/components/app/AppButton.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
@@ -259,8 +260,10 @@ onMounted(() => {
           maxlength="64"
       /></AppField>
       <template #actions
-        ><AppButton type="submit">查询</AppButton
-        ><AppButton variant="outline" @click="keyword = ''">重置</AppButton></template
+        ><AppButton type="submit" :icon="Search">查询</AppButton
+        ><AppButton variant="outline" :icon="RefreshCw" @click="keyword = ''"
+          >重置</AppButton
+        ></template
       >
     </AppFilterBar>
     <AppPanel>
@@ -438,21 +441,10 @@ onMounted(() => {
       </p>
     </form>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="dialogOpen = false"
-      >
-        取消
-      </button>
-      <button
-        type="submit"
-        form="resource-form"
-        :disabled="saving"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
+      <AppButton type="button" variant="outline" @click="dialogOpen = false"> 取消 </AppButton>
+      <AppButton type="submit" form="resource-form" :disabled="saving" variant="primary">
         {{ saving ? '保存中...' : '保存' }}
-      </button>
+      </AppButton>
     </template>
   </AppDialog>
 </template>

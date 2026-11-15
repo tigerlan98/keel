@@ -7,9 +7,13 @@ import type { RoleSummary } from '@/api/types'
 import AppButton from './AppButton.vue'
 import AppInput from './AppInput.vue'
 
-const props = defineProps<{
-  roles: RoleSummary[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    roles: RoleSummary[]
+    allowSelectAll?: boolean
+  }>(),
+  { allowSelectAll: true },
+)
 
 const selected = defineModel<number[]>({ default: () => [] })
 const search = ref('')
@@ -59,7 +63,13 @@ function toggleAll(): void {
           </template>
         </AppInput>
       </div>
-      <AppButton variant="ghost" size="sm" :disabled="filtered.length === 0" @click="toggleAll">
+      <AppButton
+        v-if="allowSelectAll"
+        variant="ghost"
+        size="sm"
+        :disabled="filtered.length === 0"
+        @click="toggleAll"
+      >
         {{ allSelected ? '取消全选' : '全选' }}
       </AppButton>
     </div>

@@ -389,7 +389,7 @@ test('列表刷新保留旧行，同一批记录不重播，换页数据按参�
   })
   await page.route('**/api/v1/admin/iam/users*', async (route) => {
     await pending
-    const fresh = new URL(route.request().url()).searchParams.has('username')
+    const fresh = new URL(route.request().url()).searchParams.has('keyword')
     const items = fresh
       ? Array.from({ length: 18 }, (_, index) => ({
           ...users[0],
@@ -412,7 +412,7 @@ test('列表刷新保留旧行，同一批记录不重播，换页数据按参�
       .first()
       .evaluate((element) => element.getAnimations().length),
   ).toBe(0)
-  await page.getByLabel('用户名', { exact: true }).fill('fresh')
+  await page.getByLabel('关键字', { exact: true }).fill('fresh')
   await page.getByRole('button', { name: '查询', exact: true }).click()
   await expect(page.locator('tbody tr').first()).toContainText('fresh-0')
   const timings = await page.locator('tbody tr').evaluateAll((elements) =>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight } from '@lucide/vue'
 import { computed } from 'vue'
+import { vPress } from '@/directives/press'
 
 import AppSelect from './AppSelect.vue'
 
@@ -99,6 +100,7 @@ function changePageSize(value: string | number | undefined): void {
       </label>
 
       <button
+        v-press
         type="button"
         class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-35"
         aria-label="上一页"
@@ -112,11 +114,12 @@ function changePageSize(value: string | number | undefined): void {
         <span v-if="item === 'ellipsis'" class="px-0.5 text-ink-faint">…</span>
         <button
           v-else
+          v-press
           type="button"
           class="h-8 min-w-8 rounded-[8px] px-2 text-[12px] font-medium transition-colors"
           :class="
             item === page
-              ? 'bg-[var(--action-bg)] text-[var(--action-ink)] shadow-[var(--shadow-e1)]'
+              ? 'bg-brand/10 text-brand font-semibold'
               : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
           "
           :aria-current="item === page ? 'page' : undefined"
@@ -127,6 +130,7 @@ function changePageSize(value: string | number | undefined): void {
       </template>
 
       <button
+        v-press
         type="button"
         class="inline-flex h-8 w-8 items-center justify-center rounded-[8px] text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-35"
         aria-label="下一页"

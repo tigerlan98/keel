@@ -1,6 +1,7 @@
 package io.github.keel.iam.application.identity;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+
 import io.github.keel.common.core.error.CommonErrorCode;
 import io.github.keel.common.core.exception.BusinessException;
 import io.github.keel.common.security.token.TokenService;
@@ -14,7 +15,9 @@ import io.github.keel.iam.infrastructure.persistence.mapper.IamUserRoleMapper;
 import io.github.keel.iam.infrastructure.persistence.po.IamRolePO;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserPO;
 import io.github.keel.iam.infrastructure.persistence.po.IamUserRolePO;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,15 +30,15 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * 用户维护：创建、资料更新、启停、重置密码、角色分配与强制下线。
- */
+/** 用户维护：创建、资料更新、启停、重置密码、角色分配与强制下线。 */
 @Service
 @RequiredArgsConstructor
 public class UserApplicationService {
 
     private static final String STATUS_ENABLED = "ENABLED";
 
+    private final io.github.keel.iam.application.organization.DepartmentApplicationService
+            departments;
     private final IamUserMapper userMapper;
     private final IamRoleMapper roleMapper;
     private final IamUserRoleMapper userRoleMapper;
@@ -50,8 +53,11 @@ public class UserApplicationService {
 
     @Transactional
     public UserDetailView create(CreateUserCommand command) {
-        Long existing = userMapper.selectCount(Wrappers.<IamUserPO>lambdaQuery()
-                .eq(IamUserPO::getUsername, command.username()));
+        departments.validateAssignment(command.departmentId(), null);
+        Long existing =
+                userMapper.selectCount(
+                        Wrappers.<IamUserPO>lambdaQuery()
+                                .eq(IamUserPO::getUsername, command.username()));
         if (existing != null && existing > 0) {
             throw new BusinessException(IamErrorCode.USERNAME_EXISTS);
         }
@@ -63,8 +69,10 @@ public class UserApplicationService {
         user.setNickname(command.nickname());
         user.setEmail(command.email());
         user.setPhone(command.phone());
-        user.setStatus(STATUS_ENABLED);
+        user.setDepartmentId(command.departmentId());
+        user.setStatus(command.status() == null ? STATUS_ENABLED : command.status().name());
         user.setMustChangePassword(true);
+        user.setVersion(0);
         userMapper.insert(user);
 
         roleIds.forEach(roleId -> insertUserRole(user.getId(), roleId));
@@ -81,6 +89,20 @@ public class UserApplicationService {
         if (userMapper.updateById(user) == 0) {
             throw new BusinessException(CommonErrorCode.OPTIMISTIC_LOCK);
         }
+        return toDetail(userMapper.selectById(id), rolesOf(id));
+    }
+
+    @Transactional
+    public UserDetailView updateProfile(long id, UpdateUserProfileCommand command) {
+        IamUserPO user = requireUser(id);
+        departments.validateAssignment(command.departmentId(), user.getDepartmentId());
+        user.setNickname(command.nickname().trim());
+        user.setEmail(command.email());
+        user.setPhone(command.phone());
+        user.setDepartmentId(command.departmentId());
+        user.setVersion(command.version());
+        if (userMapper.updateById(user) == 0)
+            throw new BusinessException(CommonErrorCode.OPTIMISTIC_LOCK);
         return toDetail(userMapper.selectById(id), rolesOf(id));
     }
 
@@ -116,26 +138,31 @@ public class UserApplicationService {
 
     public List<RoleBriefView> rolesOf(long userId) {
         requireUser(userId);
-        List<Long> roleIds = userRoleMapper.selectList(Wrappers.<IamUserRolePO>lambdaQuery()
-                        .eq(IamUserRolePO::getUserId, userId))
-                .stream()
-                .map(IamUserRolePO::getRoleId)
-                .toList();
+        List<Long> roleIds =
+                userRoleMapper
+                        .selectList(
+                                Wrappers.<IamUserRolePO>lambdaQuery()
+                                        .eq(IamUserRolePO::getUserId, userId))
+                        .stream()
+                        .map(IamUserRolePO::getRoleId)
+                        .toList();
         if (roleIds.isEmpty()) {
             return List.of();
         }
 
-        Map<Long, IamRolePO> roles = roleMapper.selectBatchIds(roleIds).stream()
-                .collect(Collectors.toMap(IamRolePO::getId, Function.identity()));
+        Map<Long, IamRolePO> roles =
+                roleMapper.selectBatchIds(roleIds).stream()
+                        .collect(Collectors.toMap(IamRolePO::getId, Function.identity()));
         List<RoleBriefView> result = new ArrayList<>();
         for (Long roleId : roleIds) {
             IamRolePO role = roles.get(roleId);
             if (role != null) {
-                result.add(new RoleBriefView(
-                        role.getId(),
-                        role.getCode(),
-                        role.getName(),
-                        RoleStatus.valueOf(role.getStatus())));
+                result.add(
+                        new RoleBriefView(
+                                role.getId(),
+                                role.getCode(),
+                                role.getName(),
+                                RoleStatus.valueOf(role.getStatus())));
             }
         }
         return result;
@@ -146,8 +173,8 @@ public class UserApplicationService {
         requireUser(userId);
         Set<Long> uniqueIds = validateRoleIds(roleIds);
 
-        userRoleMapper.delete(Wrappers.<IamUserRolePO>lambdaQuery()
-                .eq(IamUserRolePO::getUserId, userId));
+        userRoleMapper.delete(
+                Wrappers.<IamUserRolePO>lambdaQuery().eq(IamUserRolePO::getUserId, userId));
         uniqueIds.forEach(roleId -> insertUserRole(userId, roleId));
         cacheEvictor.evictUser(userId);
     }
@@ -175,8 +202,11 @@ public class UserApplicationService {
         }
 
         List<IamRolePO> roles = roleMapper.selectBatchIds(uniqueIds);
-        boolean allEnabled = roles.size() == uniqueIds.size()
-                && roles.stream().allMatch(role -> RoleStatus.ENABLED.name().equals(role.getStatus()));
+        boolean allEnabled =
+                roles.size() == uniqueIds.size()
+                        && roles.stream()
+                                .allMatch(
+                                        role -> RoleStatus.ENABLED.name().equals(role.getStatus()));
         if (!allEnabled) {
             throw new BusinessException(IamErrorCode.INVALID_ROLE_IDS);
         }
@@ -199,6 +229,12 @@ public class UserApplicationService {
     }
 
     private UserDetailView toDetail(IamUserPO user, List<RoleBriefView> roles) {
+        var department =
+                user.getDepartmentId() == null
+                        ? null
+                        : departments
+                                .briefs(List.of(user.getDepartmentId()))
+                                .get(user.getDepartmentId());
         return new UserDetailView(
                 user.getId(),
                 user.getUsername(),
@@ -212,6 +248,9 @@ public class UserApplicationService {
                 roles,
                 user.getCreatedAt(),
                 user.getUpdatedAt(),
-                user.getVersion());
+                user.getVersion(),
+                user.getDepartmentId(),
+                department == null ? null : department.name(),
+                department == null ? null : department.status());
     }
 }

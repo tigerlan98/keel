@@ -175,9 +175,9 @@ dd {
   justify-content: center;
   gap: 7px;
   padding: 8px 14px;
-  border-radius: 999px;
-  background: var(--action-bg);
-  color: var(--action-ink);
+  border-radius: 12px;
+  background: var(--button-primary-bg);
+  color: #fff;
   font-size: 12px;
   font-weight: 600;
   transition:
@@ -188,14 +188,13 @@ dd {
   box-shadow: var(--shadow-e2);
   opacity: 0.9;
 }
+.dashboard-link.primary:hover {
+  background: var(--button-primary-hover);
+}
 .dashboard-link.light {
   background: transparent;
   border: 1px solid var(--line-strong);
   color: var(--ink);
-}
-.dark .dashboard-link.primary {
-  background: var(--brand-bright);
-  color: #142008;
 }
 .side-card {
   display: flex;

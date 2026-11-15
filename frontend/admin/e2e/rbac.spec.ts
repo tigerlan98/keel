@@ -229,6 +229,13 @@ async function mockSessionWithMenus(
   menus: unknown[],
   permissions: string[] = ['iam:user:list'],
 ): Promise<void> {
+  await page.route('**/api/v1/admin/iam/departments/options', (route) =>
+    route.fulfill(
+      ok([
+        { id: 1, parentId: 0, name: '总公司', status: 'ENABLED', selectable: true, children: [] },
+      ]),
+    ),
+  )
   await page.route('**/api/v1/admin/auth/me', (route) =>
     route.fulfill(ok({ ...session, menus, permissions })),
   )

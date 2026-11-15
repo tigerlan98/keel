@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pencil, RefreshCw } from '@lucide/vue'
+import { Pencil, RefreshCw, Search } from '@lucide/vue'
 import AppButton from '@/components/app/AppButton.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
 import AppErrorState from '@/components/app/AppErrorState.vue'
@@ -191,8 +191,8 @@ onMounted(() => {
           ]"
       /></AppField>
       <template #actions
-        ><AppButton type="submit" :loading="loading">查询</AppButton
-        ><AppButton variant="outline" :disabled="loading" @click="resetFilters"
+        ><AppButton type="submit" :loading="loading" :icon="Search">查询</AppButton
+        ><AppButton variant="outline" :disabled="loading" :icon="RefreshCw" @click="resetFilters"
           >重置</AppButton
         ></template
       >
@@ -313,21 +313,10 @@ onMounted(() => {
       </p>
     </form>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="editOpen = false"
-      >
-        取消
-      </button>
-      <button
-        type="submit"
-        form="config-form"
-        :disabled="saving"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
+      <AppButton type="button" variant="outline" @click="editOpen = false"> 取消 </AppButton>
+      <AppButton type="submit" form="config-form" :disabled="saving" variant="primary">
         {{ saving ? '保存中...' : '保存' }}
-      </button>
+      </AppButton>
     </template>
   </AppDialog>
 </template>

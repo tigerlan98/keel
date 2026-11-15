@@ -37,6 +37,13 @@ export async function mockSession(
   await page.route('**/api/v1/admin/audit/**', (route) =>
     route.fulfill(ok({ items: [], total: 0, page: 1, size: 100 })),
   )
+  await page.route('**/api/v1/admin/iam/departments/options', (route) =>
+    route.fulfill(
+      ok([
+        { id: 1, parentId: 0, name: '总公司', status: 'ENABLED', selectable: true, children: [] },
+      ]),
+    ),
+  )
   await page.route('**/api/v1/admin/auth/me', (route) =>
     route.fulfill(ok({ ...session, ...overrides })),
   )

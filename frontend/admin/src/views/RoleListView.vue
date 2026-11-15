@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from '@lucide/vue'
+import { Pencil, Plus, RefreshCw, Search, ShieldCheck, Trash2 } from '@lucide/vue'
 import AppButton from '@/components/app/AppButton.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
 import AppErrorState from '@/components/app/AppErrorState.vue'
@@ -306,8 +306,8 @@ onMounted(() => {
           ]"
       /></AppField>
       <template #actions
-        ><AppButton type="submit" :loading="loading">查询</AppButton
-        ><AppButton variant="outline" :disabled="loading" @click="resetFilters"
+        ><AppButton type="submit" :loading="loading" :icon="Search">查询</AppButton
+        ><AppButton variant="outline" :disabled="loading" :icon="RefreshCw" @click="resetFilters"
           >重置</AppButton
         ></template
       >
@@ -471,21 +471,10 @@ onMounted(() => {
       </p>
     </form>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="dialogOpen = false"
-      >
-        取消
-      </button>
-      <button
-        type="submit"
-        form="role-form"
-        :disabled="saving"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
+      <AppButton type="button" variant="outline" @click="dialogOpen = false"> 取消 </AppButton>
+      <AppButton type="submit" form="role-form" :disabled="saving" variant="primary">
         {{ saving ? '保存中...' : '保存' }}
-      </button>
+      </AppButton>
     </template>
   </AppDialog>
 
@@ -494,21 +483,10 @@ onMounted(() => {
       确定删除角色「{{ deleteTarget?.name }}」吗？该操作不可撤销。
     </p>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="deleteTarget = null"
-      >
-        取消
-      </button>
-      <button
-        type="button"
-        :disabled="deleting"
-        class="inline-flex h-9 items-center rounded-md bg-destructive px-4 text-sm text-white hover:bg-destructive/90 disabled:opacity-50"
-        @click="confirmDelete"
-      >
+      <AppButton type="button" variant="outline" @click="deleteTarget = null"> 取消 </AppButton>
+      <AppButton type="button" :disabled="deleting" variant="danger" @click="confirmDelete">
         {{ deleting ? '删除中...' : '删除' }}
-      </button>
+      </AppButton>
     </template>
   </AppDialog>
 
@@ -542,21 +520,15 @@ onMounted(() => {
       {{ assignError }}
     </p>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="assignTarget = null"
-      >
-        取消
-      </button>
-      <button
+      <AppButton type="button" variant="outline" @click="assignTarget = null"> 取消 </AppButton>
+      <AppButton
         type="button"
         :disabled="assignSaving || assignLoading"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        variant="primary"
         @click="saveAssign"
       >
         {{ assignSaving ? '保存中...' : '保存授权' }}
-      </button>
+      </AppButton>
     </template>
   </AppDialog>
 </template>

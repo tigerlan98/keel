@@ -5,6 +5,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { z } from 'zod'
 
+import AppButton from '@/components/app/AppButton.vue'
+
 import { changePassword } from '@/api/auth'
 import { ApiError } from '@/api/http'
 import { useAuthStore } from '@/stores/auth'
@@ -66,7 +68,9 @@ const onSubmit = handleSubmit(async (values) => {
       <div class="mb-6 space-y-1">
         <h1 class="text-2xl font-semibold tracking-tight">修改密码</h1>
         <p class="text-sm text-muted-foreground">
-          {{ auth.mustChangePassword ? '首次登录必须修改密码后才能继续使用。' : '更新当前账号密码。' }}
+          {{
+            auth.mustChangePassword ? '首次登录必须修改密码后才能继续使用。' : '更新当前账号密码。'
+          }}
         </p>
       </div>
 
@@ -119,13 +123,9 @@ const onSubmit = handleSubmit(async (values) => {
           {{ submitError }}
         </p>
 
-        <button
-          type="submit"
-          :disabled="submitting"
-          class="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-        >
+        <AppButton type="submit" :disabled="submitting" variant="primary" class="w-full">
           {{ submitting ? '提交中...' : '确认修改' }}
-        </button>
+        </AppButton>
       </form>
     </div>
   </div>

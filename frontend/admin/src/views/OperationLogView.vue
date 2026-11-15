@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Eye, RefreshCw } from '@lucide/vue'
+import { Eye, RefreshCw, Search } from '@lucide/vue'
 import AppButton from '@/components/app/AppButton.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
 import AppErrorState from '@/components/app/AppErrorState.vue'
@@ -179,8 +179,8 @@ onMounted(() => {
           ]"
       /></AppField>
       <template #actions
-        ><AppButton type="submit" :loading="loading">查询</AppButton
-        ><AppButton variant="outline" :disabled="loading" @click="resetFilters"
+        ><AppButton type="submit" :loading="loading" :icon="Search">查询</AppButton
+        ><AppButton variant="outline" :disabled="loading" :icon="RefreshCw" @click="resetFilters"
           >重置</AppButton
         ></template
       >

@@ -1,7 +1,9 @@
 # 04 API 接口设计
 
+> 2026-11-15 部门扩展已确认并实现，细则见 [07 §5–6](07-部门管理与用户页面调整设计.md)；OpenAPI 由实际后端导出并生成前端类型，旧 v1 契约保持兼容。
+
 > 状态：v0.3（评审确认定稿）
-> 更新：2026-11-12
+> 更新：2026-11-15
 > 关联：`01-需求与功能模块梳理.md`、`02-技术选型与整体架构.md`、`03-数据库设计.md`、`06-设计方案评审结果.md`、`../rules/api-rules.md`
 
 ## 1. 概述
@@ -175,6 +177,14 @@
 | PUT | `/api/v1/admin/iam/users/{id}/roles` | `iam:user:assign-role` | 替换用户角色 |
 | DELETE | `/api/v1/admin/iam/users/{id}/sessions` | `iam:user:force-logout` | 踢出全部端 |
 | DELETE | `/api/v1/admin/iam/users/{id}/sessions/{device}` | `iam:user:force-logout` | 踢出指定端 |
+| PUT | `/api/v1/admin/iam/users/{id}/profile` | `iam:user:update` | 原子保存完整资料与部门 |
+| GET | `/api/v1/admin/iam/departments/tree` | `iam:department:list` | 部门管理树 |
+| GET | `/api/v1/admin/iam/departments/options` | 见第17节最小授权 | 部门选择与用户筛选 |
+| GET | `/api/v1/admin/iam/departments/{id}` | `iam:department:list` | 部门详情 |
+| POST | `/api/v1/admin/iam/departments` | `iam:department:create` | 创建部门 |
+| PUT | `/api/v1/admin/iam/departments/{id}` | `iam:department:update` | 编辑部门 |
+| PATCH | `/api/v1/admin/iam/departments/{id}/status` | `iam:department:status` | 启停部门 |
+| DELETE | `/api/v1/admin/iam/departments/{id}` | `iam:department:delete` | 删除空叶，version必传 |
 | GET | `/api/v1/admin/iam/roles` | `iam:role:list` | 角色分页 |
 | GET | `/api/v1/admin/iam/roles/{id}` | `iam:role:list` | 角色详情 |
 | POST | `/api/v1/admin/iam/roles` | `iam:role:create` | 创建角色 |
@@ -314,10 +324,14 @@
 | `sort` | string | 否 | 白名单：`createdAt`、`username`、`lastLoginAt` |
 | `username` | string | 否 | 前缀匹配 |
 | `status` | enum | 否 | `ENABLED` / `DISABLED` |
+| `keyword` | string | 否 | 1–64，账号/显示名称/手机号前缀 OR，与 username 同传时 AND |
+| `departmentId` | long | 否 | 正数，部门筛选 |
+| `includeDescendants` | boolean | 否 | 缺省 true，仅 departmentId 存在时允许显式传入 |
+| `unassignedDepartment` | boolean | 否 | 缺省 false，为 true 时与 departmentId 互斥 |
 
 **响应**：`PageResult<UserSummary>`
 
-`UserSummary`：`id`、`username`、`nickname`、`status`、`lastLoginAt`、`createdAt`。
+`UserSummary`：`id`、`username`、`nickname`、`status`、`lastLoginAt`、`createdAt`、`phone`、`departmentId`、`departmentName`、`roles`（RoleBrief[]，无角色为空数组）。部门未分配时可空字段按 non_null 省略。查询按用户分页后批量补齐部门与角色，不按多角色 JOIN 直接分页。
 
 ### 5.2 `GET /api/v1/admin/iam/users/{id}`
 
@@ -325,7 +339,7 @@
 
 **响应 `UserDetail`**
 
-`id`、`username`、`nickname`、`email`、`phone`、`status`、`mustChangePassword`、`lastLoginAt`、`lastLoginIp`、`roles`（`RoleBrief[]`）、`createdAt`、`updatedAt`、`version`。
+`id`、`username`、`nickname`、`email`、`phone`、`status`、`mustChangePassword`、`lastLoginAt`、`lastLoginIp`、`roles`（`RoleBrief[]`）、`createdAt`、`updatedAt`、`version`、`departmentId`、`departmentName`、`departmentStatus`。
 
 ### 5.3 `POST /api/v1/admin/iam/users`
 
@@ -340,7 +354,9 @@
 | `nickname` | string | 是 | 1–64 |
 | `email` | string? | 否 | 邮箱格式，≤128 |
 | `phone` | string? | 否 | 6–32，数字/`+-` |
-| `roleIds` | long[] | 否 | 只允许启用角色 |
+| `roleIds` | long[] | 否 | 只允许启用角色，最多100个，允许不分配 |
+| `departmentId` | long? | 否 | v1兼容可缺省；新版UI必选，有值时须关联启用部门 |
+| `status` | enum | 否 | 缺省 ENABLED；显式 null/非法枚举返回400 |
 
 **响应**：201 + `UserDetail`
 
@@ -362,6 +378,8 @@
 | `version` | int | 是 | 乐观锁版本 |
 
 **响应**：200 + `UserDetail`
+
+该旧接口不读写部门，避免旧客户端清空既有归属。新版完整资料使用下述 profile 端点。
 
 **错误**：`IAM_USER_NOT_FOUND` 404、`COMMON_OPTIMISTIC_LOCK` 409。
 
@@ -432,6 +450,10 @@
 **路径参数**：`device` 为 `WEB` / `APP` / `MINI`。
 
 **响应**：204；无会话时同样返回 204。
+
+### 5.11 `PUT /api/v1/admin/iam/users/{id}/profile`
+
+权限 `iam:user:update`。profile 为单例子资源；全量提交 nickname、email、phone、departmentId、version，邮箱/手机可显式 null，字段缺失400；部门为正数且必填，原子保存资料与归属。用户名、角色、状态和密码不可通过此端点修改。200 + UserDetail，版本冲突409；已有停用部门不变时允许改其他资料，新的归属必须启用。完整请求/响应及兼容细则见 07 §6。
 
 ## 6. 角色管理
 
@@ -723,6 +745,17 @@
 | `IAM_RESOURCE_PARENT_INVALID` | 400 | 目标父级不存在或会形成环 |
 | `IAM_RESOURCE_HAS_ENABLED_CHILDREN` | 409 | 资源存在启用子资源，不能停用 |
 | `IAM_INVALID_RESOURCE_IDS` | 400 | 资源列表包含无效项 |
+| `IAM_DEPARTMENT_NOT_FOUND` | 404 | 部门详情/筛选/目标归属不存在 |
+| `IAM_DEPARTMENT_CODE_EXISTS` | 409 | 部门编码重复 |
+| `IAM_DEPARTMENT_NAME_EXISTS` | 409 | 同一父级下重名 |
+| `IAM_DEPARTMENT_DISABLED` | 409 | 父级/祖先/新归属已停用 |
+| `IAM_DEPARTMENT_CYCLE` | 409 | 父级为自己或后代，包括并发移动 |
+| `IAM_DEPARTMENT_DEPTH_EXCEEDED` | 409 | 移动后任一后代超 16 层或创建超层 |
+| `IAM_DEPARTMENT_LIMIT_EXCEEDED` | 409 | 创建超 1000 或读取发现异常超量 |
+| `IAM_DEPARTMENT_HAS_ENABLED_DESCENDANTS` | 409 | 停用前存在启用后代 |
+| `IAM_DEPARTMENT_HAS_CHILDREN` | 409 | 删除时存在子部门 |
+| `IAM_DEPARTMENT_IN_USE` | 409 | 删除时存在直接用户引用 |
+| `IAM_DEPARTMENT_PROTECTED` | 409 | 移动/停用/删除内置根 |
 | `SYS_CONFIG_NOT_FOUND` | 404 | 系统参数不存在 |
 | `SYS_CONFIG_VALUE_INVALID` | 400 | 系统参数值不合法 |
 | `SYS_CONFIG_PUBLIC_FORBIDDEN` | 400 | 该参数不允许公开 |
@@ -745,7 +778,7 @@
 ## 12. OpenAPI 约定
 
 - 使用 SpringDoc 生成 OpenAPI 3。
-- 标签：`Auth`、`User`、`Role`、`Resource`、`SystemConfig`、`AuditLog`、`Public`。
+- 标签：`Auth`、`User`、`Role`、`Resource`、`Department`、`SystemConfig`、`AuditLog`、`Public`。
 - 安全方案：
   - `cookieAuth`：apiKey，位置 cookie，名称 `KEEL_TOKEN`。
   - `bearerAuth`：HTTP bearer，`bearerFormat: opaque`。
@@ -760,7 +793,8 @@
 ## 13. 前端对接约定
 
 - 启动调用 `/auth/me`；401 进入登录页，403 展示无权限。
-- 登录前先获取 CSRF token；所有写请求带 `X-XSRF-TOKEN`。
+- 登录前先获取 CSRF token；Cookie 认证的写请求由公共 HTTP 层统一携带 `X-XSRF-TOKEN`。缺少 `XSRF-TOKEN` Cookie 时，先调用 `/auth/csrf`，并发请求共用一次获取。
+- 写请求收到 `403 AUTH_CSRF_INVALID` 时，公共 HTTP 层重新获取 token，并使用原请求内容最多重试一次；该错误发生在 CSRF 过滤阶段，业务尚未执行。其他 403 不重试，也不清理登录态。
 - 登录成功后不保存 token；依赖 `KEEL_TOKEN` Cookie。
 - 登录成功后默认进入工作台 `/`，首次改密与显式登录回跳优先。工作台不新增 API：按权限调用现有日志分页接口，使用近 30 天最新各 100 条记录统计，支持失败重试；顶部不展示统计范围描述。
 - 资源与系统参数页面不提供新增/删除入口，仅提供编辑、启停和参数值更新。
@@ -804,3 +838,21 @@
 - `05-实施计划与工程规范.md`
 - `06-设计方案评审结果.md`
 - `../rules/api-rules.md`
+
+## 17. 部门管理
+
+已确认并实现的部门 API、DTO、权限、错误码和示例详见 [07 §5–6](07-部门管理与用户页面调整设计.md)。端点列表如下，公共前缀为 `/api/v1/admin/iam`：
+
+| 方法 | 路径 | 权限 | 响应 |
+|---|---|---|---|
+| GET | `/departments/tree` | `iam:department:list` | 200，DepartmentNode[]，有界树 |
+| GET | `/departments/options` | 部门查询/创建/编辑或用户查询/创建/编辑任一权限 | 200，DepartmentOption[]，最小选项树 |
+| GET | `/departments/{id}` | `iam:department:list` | 200，DepartmentDetail |
+| POST | `/departments` | `iam:department:create` | 201，DepartmentDetail |
+| PUT | `/departments/{id}` | `iam:department:update` | 200，DepartmentDetail |
+| PATCH | `/departments/{id}/status` | `iam:department:status` | 200，DepartmentDetail |
+| DELETE | `/departments/{id}?version={version}` | `iam:department:delete` | 204 |
+
+不分页树最多1000节点，默认包含启停部门；编码和同级名称唯一，根保护、防环/深度/版本/引用校验由服务端完成。删除version为必填非负数。options不授予组织维护权限，不能据此显示部门管理菜单。
+
+新用户筛选及资料接口见第5节；未来跨模块复用使用内部契约，不通过HTTP自调用前端options接口。契约快照由后端导出，不手工修改。

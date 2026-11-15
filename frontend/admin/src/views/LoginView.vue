@@ -19,6 +19,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { z } from 'zod'
 
 import { ApiError } from '@/api/http'
+import { vPress } from '@/directives/press'
 import { useAuthStore } from '@/stores/auth'
 
 type StatusState = 'ready' | 'loading' | 'error'
@@ -418,7 +419,14 @@ const onSubmit = handleSubmit(async (values) => {
               <span>{{ submitError }}</span>
             </div>
 
-            <button class="submit" type="submit" :disabled="submitting" :aria-busy="submitting">
+            <button
+              v-press
+              class="submit app-button"
+              data-press-ripple="true"
+              type="submit"
+              :disabled="submitting"
+              :aria-busy="submitting"
+            >
               <LoaderCircle v-if="submitting" :size="15" class="animate-spin" aria-hidden="true" />
               <span>{{ submitting ? '正在登录' : '登录' }}</span>
             </button>
@@ -1021,28 +1029,24 @@ const onSubmit = handleSubmit(async (values) => {
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: var(--lp-paper);
-  background: var(--lp-ink);
+  color: #fff;
+  background: var(--button-primary-bg);
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
+  box-shadow: var(--shadow-button);
   transition:
     background-color 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
+    box-shadow 0.16s ease;
 }
 
 .submit:hover:not(:disabled) {
-  background: var(--lp-ink-raise);
-  box-shadow: 0 12px 26px -18px rgba(62, 139, 126, 0.65);
-}
-
-.submit:active:not(:disabled) {
-  transform: translateY(1px);
+  background: var(--button-primary-hover);
+  box-shadow: var(--shadow-button-hover);
 }
 
 .submit:focus-visible {
-  outline: 2px solid var(--lp-verdigris);
+  outline: 2px solid var(--button-primary-bg);
   outline-offset: 3px;
 }
 

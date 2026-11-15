@@ -47,6 +47,12 @@ const router = createRouter({
           meta: { title: '菜单管理', permission: 'iam:resource:list' },
         },
         {
+          path: 'iam/departments',
+          name: 'departments',
+          component: () => import('@/views/DepartmentListView.vue'),
+          meta: { title: '部门管理', permission: 'iam:department:list' },
+        },
+        {
           path: 'system/config',
           name: 'system-config',
           component: () => import('@/views/SystemConfigView.vue'),

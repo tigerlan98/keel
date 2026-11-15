@@ -112,11 +112,18 @@ function update(value: unknown): void {
 }
 .app-select-trigger:focus-visible,
 .app-select-trigger[data-state='open'] {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 2px var(--brand-soft);
+  border-color: transparent;
+  outline: 2px solid var(--control-focus);
+  outline-offset: 2px;
+  box-shadow: var(--inset-edge);
 }
 .app-select-trigger.is-invalid {
   border-color: var(--destructive);
+}
+.app-select-trigger.is-invalid:focus-visible,
+.app-select-trigger.is-invalid[data-state='open'] {
+  border-color: transparent;
+  outline-color: var(--destructive);
 }
 .app-select-trigger:disabled {
   cursor: not-allowed;

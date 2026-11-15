@@ -45,9 +45,33 @@ export function onForbidden(handler: ForbiddenHandler): void {
 
 function readCookie(name: string): string | null {
   const prefix = `${name}=`
-  const item = document.cookie.split('; ').find((cookie) => cookie.startsWith(prefix))
-  return item ? decodeURIComponent(item.slice(prefix.length)) : null
+  const item = document.cookie
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(prefix))
+  if (!item) return null
+  try {
+    return decodeURIComponent(item.slice(prefix.length)) || null
+  } catch {
+    return null
+  }
 }
+
+interface CsrfRequestConfig extends InternalAxiosRequestConfig {
+  csrfRetryAttempted?: boolean
+  csrfRetryToken?: string
+}
+
+function needsCsrf(config: InternalAxiosRequestConfig): boolean {
+  const method = config.method?.toUpperCase() ?? 'GET'
+  const authorization = config.headers.get('Authorization')
+  return (
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) &&
+    !(typeof authorization === 'string' && /^Bearer\s/i.test(authorization))
+  )
+}
+
+let csrfRequest: Promise<string> | null = null
 
 function extractFieldErrors(body?: ApiResponse<unknown>): FieldErrorItem[] {
   const data = body?.data as ValidationErrorData | undefined
@@ -60,9 +84,14 @@ const http = axios.create({
   withCredentials: true,
 })
 
-http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const csrfToken = readCookie('XSRF-TOKEN')
-  if (csrfToken) {
+http.interceptors.request.use(async (config: CsrfRequestConfig) => {
+  if (needsCsrf(config)) {
+    const explicitToken = config.headers.get('X-XSRF-TOKEN')
+    const csrfToken =
+      config.csrfRetryToken ||
+      readCookie('XSRF-TOKEN') ||
+      (typeof explicitToken === 'string' ? explicitToken : '') ||
+      (await fetchCsrfToken())
     config.headers.set('X-XSRF-TOKEN', csrfToken)
   }
   return config
@@ -73,14 +102,33 @@ http.interceptors.response.use(
     const body = response.data as ApiResponse<unknown> | undefined
     if (body && typeof body.code === 'string' && body.code !== 'OK') {
       return Promise.reject(
-        new ApiError(body.code, body.message || '请求失败', response.status, extractFieldErrors(body)),
+        new ApiError(
+          body.code,
+          body.message || '请求失败',
+          response.status,
+          extractFieldErrors(body),
+        ),
       )
     }
     return response
   },
-  (error: AxiosError<ApiResponse<unknown>>) => {
+  async (error: AxiosError<ApiResponse<unknown>>) => {
     const status = error.response?.status
     const body = error.response?.data
+    const config = error.config as CsrfRequestConfig | undefined
+
+    // CsrfFilter 拒绝的请求尚未执行业务，只对该明确错误恢复一次。
+    if (
+      status === 403 &&
+      body?.code === 'AUTH_CSRF_INVALID' &&
+      config &&
+      needsCsrf(config) &&
+      !config.csrfRetryAttempted
+    ) {
+      config.csrfRetryAttempted = true
+      config.csrfRetryToken = await fetchCsrfToken()
+      return http.request(config)
+    }
 
     if (status === 401) {
       unauthorizedHandler?.()
@@ -105,9 +153,21 @@ http.interceptors.response.use(
 /**
  * 获取 CSRF token。Web 登录与写请求前调用，服务端会同时写入 XSRF-TOKEN Cookie。
  */
-export async function fetchCsrfToken(): Promise<string> {
-  const response = await http.get<ApiResponse<{ token: string }>>('/admin/auth/csrf')
-  return response.data.data.token
+export function fetchCsrfToken(): Promise<string> {
+  // 并发写入共用一次获取，避免首次生成的 Cookie 和请求头互相覆盖。
+  if (!csrfRequest) {
+    csrfRequest = http
+      .get<ApiResponse<{ token: string }>>('/admin/auth/csrf')
+      .then((response) => {
+        const token = response.data.data.token
+        if (!token) throw new ApiError('COMMON_REQUEST_FAILED', '获取 CSRF token 失败')
+        return token
+      })
+      .finally(() => {
+        csrfRequest = null
+      })
+  }
+  return csrfRequest
 }
 
 export default http

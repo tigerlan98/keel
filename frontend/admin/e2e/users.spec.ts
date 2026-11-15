@@ -33,20 +33,20 @@ test.describe('用户列表', () => {
     await page.goto('/iam/users')
 
     const table = page.locator('tbody')
-    await expect(table.getByRole('cell', { name: 'admin', exact: true })).toBeVisible()
-    await expect(table.getByRole('cell', { name: 'operator', exact: true })).toBeVisible()
+    await expect(table.getByRole('cell', { name: '超级管理员 @admin', exact: true })).toBeVisible()
+    await expect(table.getByRole('cell', { name: '运营 @operator', exact: true })).toBeVisible()
     await expect(table.locator('span').getByText('启用', { exact: true })).toBeVisible()
     await expect(table.locator('span').getByText('禁用', { exact: true })).toBeVisible()
     await expect(page.getByText('共 25 条')).toBeVisible()
     await expect(page.getByText('1 / 2')).toBeVisible()
   })
 
-  test('查询时携带用户名前缀、状态与排序参数', async ({ page }) => {
+  test('查询时携带关键字、状态与排序参数', async ({ page }) => {
     const requests: URL[] = []
     await mockUsers(page, requests)
 
     await page.goto('/iam/users')
-    await page.getByLabel('用户名').fill('ali')
+    await page.getByLabel('关键字').fill('ali')
     await chooseOption(page, '状态', '启用')
     await page.getByRole('button', { name: '查询' }).click()
 
@@ -54,7 +54,7 @@ test.describe('用户列表', () => {
     const last = requests.at(-1)!
     expect(last.searchParams.get('page')).toBe('1')
     expect(last.searchParams.get('sort')).toBe('createdAt,desc')
-    expect(last.searchParams.get('username')).toBe('ali')
+    expect(last.searchParams.get('keyword')).toBe('ali')
     expect(last.searchParams.get('status')).toBe('ENABLED')
   })
 
@@ -94,7 +94,7 @@ test.describe('用户列表', () => {
     await expect(page.getByText('系统繁忙，请稍后重试')).toBeVisible()
 
     await page.getByRole('button', { name: '重试' }).click()
-    await expect(page.getByRole('cell', { name: 'admin', exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: '超级管理员 @admin', exact: true })).toBeVisible()
   })
 })
 

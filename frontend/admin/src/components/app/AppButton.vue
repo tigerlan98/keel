@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import { LoaderCircle } from '@lucide/vue'
 import { cva } from 'class-variance-authority'
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 
 import { cn } from '@/lib/utils'
+import { vPress } from '@/directives/press'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-semibold outline-none transition-[background-color,border-color,box-shadow,color,transform] duration-150 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas active:translate-y-px disabled:pointer-events-none disabled:opacity-45',
+  'app-button inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-[12px] text-[13px] font-semibold outline-none transition-[background-color,border-color,box-shadow,color] duration-150 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-45',
   {
     variants: {
       variant: {
         primary:
-          'bg-[var(--action-bg)] text-[var(--action-ink)] shadow-[var(--shadow-e1)] hover:opacity-90',
+          'bg-[var(--button-primary-bg)] text-white shadow-[var(--shadow-button)] hover:bg-[var(--button-primary-hover)] hover:shadow-[var(--shadow-button-hover)]',
         brand:
-          'bg-brand text-white shadow-[0_10px_24px_-18px_rgba(62,139,126,0.7)] hover:bg-brand-strong',
+          'bg-[var(--button-primary-bg)] text-white shadow-[var(--shadow-button)] hover:bg-[var(--button-primary-hover)] hover:shadow-[var(--shadow-button-hover)]',
         outline:
           'border border-line-soft bg-[var(--input-surface)] text-ink shadow-[var(--shadow-e1)] hover:border-line-strong hover:bg-[var(--hover-surface)]',
         ghost: 'text-ink-muted hover:bg-ink/5 hover:text-ink',
@@ -22,11 +23,11 @@ const buttonVariants = cva(
         'danger-ghost': 'text-destructive hover:bg-destructive/10',
       },
       size: {
-        sm: 'h-8 px-3',
+        sm: 'h-8 rounded-[8px] px-3',
         md: 'h-9 px-4',
         lg: 'h-10 px-5 text-[13.5px]',
-        icon: 'h-9 w-9 px-0',
-        'icon-sm': 'h-8 w-8 px-0',
+        icon: 'h-9 w-9 rounded-[8px] px-0',
+        'icon-sm': 'h-8 w-8 rounded-[8px] px-0',
       },
     },
     defaultVariants: {
@@ -42,6 +43,7 @@ type ButtonVariant =
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon' | 'icon-sm'
 
 type Props = {
+  icon?: Component
   loading?: boolean
   disabled?: boolean
   type?: 'button' | 'submit' | 'reset'
@@ -50,6 +52,7 @@ type Props = {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  icon: undefined,
   loading: false,
   disabled: false,
   type: 'button',
@@ -61,8 +64,16 @@ const classes = computed(() => cn(buttonVariants({ variant: props.variant, size:
 </script>
 
 <template>
-  <button :type="type" :disabled="disabled || loading" :class="classes">
+  <button
+    v-press
+    :type="type"
+    :disabled="disabled || loading"
+    :aria-busy="loading"
+    :class="classes"
+    :data-press-ripple="['primary', 'brand', 'danger'].includes(variant)"
+  >
     <LoaderCircle v-if="loading" :size="14" class="shrink-0 animate-spin" aria-hidden="true" />
+    <component :is="icon" v-else-if="icon" :size="14" class="shrink-0" aria-hidden="true" />
     <slot />
   </button>
 </template>

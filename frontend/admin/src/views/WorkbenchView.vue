@@ -4,6 +4,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { format, startOfDay, startOfHour, subDays, subHours } from 'date-fns'
 import { ApiError } from '@/api/http'
+import { vPress } from '@/directives/press'
 import { fetchLoginLogs, fetchOperationLogs } from '@/api/logs'
 import type { LoginLogSummary, OperationLogSummary } from '@/api/types'
 import AppButton from '@/components/app/AppButton.vue'
@@ -339,7 +340,11 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="card-actions">
-            <RouterLink to="/audit/login-logs" class="dashboard-link primary"
+            <RouterLink
+              v-press
+              to="/audit/login-logs"
+              class="dashboard-link primary app-button"
+              data-press-ripple="true"
               >查看登录日志 <ArrowRight :size="14" /></RouterLink
             ><AppButton variant="outline" :loading="loading" @click="load"
               ><RefreshCw :size="14" />刷新</AppButton
@@ -500,7 +505,11 @@ onUnmounted(() => {
       <section class="workbench-card timeline-card">
         <header class="card-heading">
           <h2>今日操作泳道</h2>
-          <RouterLink v-if="canOperation" to="/audit/operation-logs" class="dashboard-link light"
+          <RouterLink
+            v-if="canOperation"
+            v-press
+            to="/audit/operation-logs"
+            class="dashboard-link light app-button"
             >操作日志 <ArrowRight :size="14"
           /></RouterLink>
         </header>
