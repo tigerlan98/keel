@@ -87,6 +87,7 @@ export const vPress: Directive<Button> = {
     }
 
     function press(event?: InstanceType<typeof globalThis.PointerEvent>): void {
+      if (element.dataset.pressAnimation === 'false') return
       if (pressed || element.matches(':disabled, [aria-disabled="true"]') || motionSkipped()) return
       pressed = true
       animate(true)

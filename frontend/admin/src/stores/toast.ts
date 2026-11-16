@@ -1,31 +1,57 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { onScopeDispose, ref } from 'vue'
 
 export type ToastType = 'success' | 'error' | 'info'
+export interface ToastItem {
+  id: number
+  message: string
+  type: ToastType
+  duration: number
+}
 
-/**
- * 轻量全局提示，用于 403、操作成功等跨页面反馈。
- */
 export const useToastStore = defineStore('toast', () => {
-  const visible = ref(false)
-  const message = ref('')
-  const type = ref<ToastType>('info')
-  let timer: number | undefined
+  const items = ref<ToastItem[]>([])
+  const paused = ref(false)
+  const timers = new Map<number, { handle: number; endsAt: number; remaining: number }>()
+  let seed = 0
 
-  function show(text: string, kind: ToastType = 'info'): void {
-    message.value = text
-    type.value = kind
-    visible.value = true
-    window.clearTimeout(timer)
-    timer = window.setTimeout(() => {
-      visible.value = false
-    }, 3000)
+  function dismiss(id: number): void {
+    items.value = items.value.filter((item) => item.id !== id)
+    window.clearTimeout(timers.get(id)?.handle)
+    timers.delete(id)
   }
-
+  function schedule(id: number, duration: number): void {
+    timers.set(id, {
+      handle: paused.value ? 0 : window.setTimeout(() => dismiss(id), duration),
+      endsAt: Date.now() + duration,
+      remaining: duration,
+    })
+  }
+  function show(message: string, type: ToastType = 'info'): void {
+    const id = ++seed
+    const duration = type === 'error' ? 4200 : 2600
+    items.value.push({ id, message, type, duration })
+    if (items.value.length > 4) dismiss(items.value[0]!.id)
+    schedule(id, duration)
+  }
+  function pause(): void {
+    if (paused.value) return
+    paused.value = true
+    timers.forEach((timer) => {
+      window.clearTimeout(timer.handle)
+      timer.remaining = Math.max(0, timer.endsAt - Date.now())
+    })
+  }
+  function resume(): void {
+    if (!paused.value) return
+    paused.value = false
+    timers.forEach((timer, id) => schedule(id, Math.max(600, timer.remaining)))
+  }
   function hide(): void {
-    visible.value = false
-    window.clearTimeout(timer)
+    timers.forEach((timer) => window.clearTimeout(timer.handle))
+    timers.clear()
+    items.value = []
   }
-
-  return { visible, message, type, show, hide }
+  onScopeDispose(hide)
+  return { items, paused, show, dismiss, pause, resume, hide }
 })

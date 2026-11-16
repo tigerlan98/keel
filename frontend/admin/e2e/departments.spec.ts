@@ -174,6 +174,92 @@ test('用户资料使用profile原子保存，旧账号需补齐部门', async (
   expect(payload?.email).toBeNull()
   expect(payload?.version).toBe(0)
 })
+test('编辑用户回显角色，角色失败后使用新版本重试', async ({ page }) => {
+  const first = {
+    id: 5,
+    code: 'EDITOR',
+    name: '编辑员',
+    status: 'ENABLED',
+    sort: 0,
+    createdAt: user.createdAt,
+  }
+  const second = { ...first, id: 6, code: 'REVIEWER', name: '审核员' }
+  let version = 0
+  let assignments = 0
+  const submittedVersions: number[] = []
+  await page.route('**/api/v1/admin/iam/roles*', (route) =>
+    route.fulfill(ok({ items: [first, second], total: 2, page: 1, size: 100 })),
+  )
+  await page.route('**/api/v1/admin/iam/users**', (route) => {
+    const path = new URL(route.request().url()).pathname
+    const detail = { ...user, roles: [first], version }
+    if (path.endsWith('/profile')) {
+      submittedVersions.push(route.request().postDataJSON().version)
+      version += 1
+      return route.fulfill(ok({ ...detail, version }))
+    }
+    if (path.endsWith('/2/roles')) {
+      expect(route.request().postDataJSON().roleIds).toEqual([6])
+      assignments += 1
+      return assignments === 1
+        ? route.fulfill({
+            status: 409,
+            json: { code: 'COMMON_OPTIMISTIC_LOCK', message: '角色已变更，请重试', data: null },
+          })
+        : route.fulfill({ status: 204, body: '' })
+    }
+    if (path.endsWith('/2')) return route.fulfill(ok(detail))
+    return route.fulfill(ok({ items: [detail], total: 1, page: 1, size: 10 }))
+  })
+  await page.goto('/iam/users')
+  await page.getByRole('button', { name: '编辑', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: '编辑用户', exact: true })
+  await expect(dialog.getByRole('button', { name: '选择角色', exact: true })).toHaveText('编辑员')
+  await expect(dialog.getByRole('button', { name: '选择角色', exact: true })).toBeEnabled()
+  await dialog.getByRole('button', { name: '选择角色', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: '选择角色', exact: true })
+  await picker.getByRole('checkbox', { name: '编辑员 EDITOR' }).uncheck()
+  await picker.getByRole('checkbox', { name: '审核员 REVIEWER' }).check()
+  await page.keyboard.press('Escape')
+  await dialog.getByRole('button', { name: '保存', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('用户资料已保存，角色保存失败')
+  await expect(dialog.getByRole('button', { name: '选择角色', exact: true })).toHaveText('审核员')
+  await dialog.getByRole('button', { name: '保存', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
+  expect(submittedVersions).toEqual([0, 1])
+  expect(assignments).toBe(2)
+  await expect(page.locator('.toast-msg')).toHaveText('用户信息已更新')
+})
+
+test('只有资料编辑权限时角色只读，保存不调用授权接口', async ({ page }) => {
+  await mockSession(page, { superAdmin: false, permissions: ['iam:user:list', 'iam:user:update'] })
+  let assignments = 0
+  let profiles = 0
+  const detail = { ...user, roles: [{ id: 5, code: 'EDITOR', name: '编辑员', status: 'ENABLED' }] }
+  await page.route('**/api/v1/admin/iam/users**', (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/roles')) {
+      assignments += 1
+      return route.fulfill({ status: 204, body: '' })
+    }
+    if (path.endsWith('/profile')) {
+      profiles += 1
+      return route.fulfill(ok({ ...detail, version: 1 }))
+    }
+    if (path.endsWith('/2')) return route.fulfill(ok(detail))
+    return route.fulfill(ok({ items: [detail], total: 1, page: 1, size: 10 }))
+  })
+  await page.goto('/iam/users')
+  await page.getByRole('button', { name: '编辑', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: '编辑用户', exact: true })
+  await expect(dialog.getByText('编辑员', { exact: true })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: '选择角色', exact: true })).toHaveCount(0)
+  await dialog.getByRole('button', { name: '保存', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
+  expect(profiles).toBe(1)
+  expect(assignments).toBe(0)
+})
+
 test('部门页面新增、编辑和版本冲突保留输入', async ({ page }, testInfo) => {
   const nodes = tree()
   let writes = 0

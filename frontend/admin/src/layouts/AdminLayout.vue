@@ -9,6 +9,7 @@ import AppLogo from '@/components/app/AppLogo.vue'
 import SidebarNavigation from '@/components/app/SidebarNavigation.vue'
 import MenuSearch from '@/components/app/MenuSearch.vue'
 import UserMenu from '@/components/app/UserMenu.vue'
+import ChangePasswordDialog from '@/components/app/ChangePasswordDialog.vue'
 import { findMenuTrail } from '@/lib/menus'
 import { cancelPageMotion, pageEnter, pageLeave } from '@/lib/motion'
 import { useAuthStore } from '@/stores/auth'
@@ -30,6 +31,7 @@ function readCollapsedState(): boolean {
 const collapsed = ref(readCollapsedState())
 const mobileOpen = ref(false)
 const logoutOpen = ref(false)
+const changePasswordOpen = ref(false)
 const loggingOut = ref(false)
 const drawerCloseRef = useTemplateRef<{ focus: () => void }>('drawerClose')
 const mainContent = useTemplateRef<InstanceType<typeof globalThis.HTMLElement>>('mainContent')
@@ -53,7 +55,7 @@ function toggleCollapsed(): void {
 }
 
 function openChangePassword(): void {
-  void router.push({ name: 'change-password' })
+  changePasswordOpen.value = true
 }
 
 async function confirmLogout(): Promise<void> {
@@ -220,6 +222,7 @@ onUnmounted(() => {
       </Transition>
     </Teleport>
 
+    <ChangePasswordDialog :open="changePasswordOpen" @close="changePasswordOpen = false" />
     <AppConfirm
       :open="logoutOpen"
       title="退出登录"

@@ -9,7 +9,7 @@ import AppInput from './AppInput.vue'
 
 const props = withDefaults(
   defineProps<{
-    roles: RoleSummary[]
+    roles: Pick<RoleSummary, 'id' | 'name' | 'code' | 'status'>[]
     allowSelectAll?: boolean
   }>(),
   { allowSelectAll: true },
@@ -85,9 +85,12 @@ function toggleAll(): void {
           type="checkbox"
           class="h-3.5 w-3.5 shrink-0 accent-[var(--brand)]"
           :checked="selected.includes(role.id)"
+          :disabled="role.status === 'DISABLED' && !selected.includes(role.id)"
           @change="toggleRole(role.id)"
         />
-        <span class="min-w-0 flex-1 truncate font-medium text-ink">{{ role.name }}</span>
+        <span class="min-w-0 flex-1 truncate font-medium text-ink"
+          >{{ role.name }}{{ role.status === 'DISABLED' ? '（已停用）' : '' }}</span
+        >
         <span class="code-chip">{{ role.code }}</span>
       </label>
 

@@ -65,6 +65,8 @@ test.describe('RBAC 与菜单', () => {
   })
 
   test('角色页面可新增角色并提交编码', async ({ page }) => {
+    await mockUsers(page)
+    await page.route('**/api/v1/admin/iam/resources/tree*', (route) => route.fulfill(ok([])))
     await mockSessionWithMenus(
       page,
       [
@@ -109,7 +111,7 @@ test.describe('RBAC 与菜单', () => {
     await page.getByLabel('名称').fill('运维管理员')
     await page.getByRole('button', { name: '保存' }).click()
 
-    await expect(page.getByText('角色已创建')).toBeVisible()
+    await expect(page.getByText('角色已新增')).toBeVisible()
     expect(createdBody).toMatchObject({ code: 'OPS_ADMIN', name: '运维管理员' })
   })
 

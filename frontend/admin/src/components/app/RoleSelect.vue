@@ -4,9 +4,15 @@ import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from 'reka
 import { computed } from 'vue'
 import type { RoleSummary } from '@/api/types'
 import RolePicker from './RolePicker.vue'
-const props = withDefaults(defineProps<{ roles: RoleSummary[]; disabled?: boolean }>(), {
-  disabled: false,
-})
+const props = withDefaults(
+  defineProps<{
+    roles: Pick<RoleSummary, 'id' | 'name' | 'code' | 'status'>[]
+    disabled?: boolean
+  }>(),
+  {
+    disabled: false,
+  },
+)
 const model = defineModel<number[]>({ default: () => [] })
 const label = computed(
   () =>
@@ -18,7 +24,7 @@ const label = computed(
 </script>
 <template>
   <PopoverRoot
-    ><PopoverTrigger :disabled="disabled" class="app-select-trigger" aria-label="选择初始角色"
+    ><PopoverTrigger :disabled="disabled" class="app-select-trigger" aria-label="选择角色"
       ><span class="truncate">{{ label }}</span
       ><ChevronDown :size="15" aria-hidden="true" /></PopoverTrigger
     ><PopoverPortal
@@ -27,7 +33,7 @@ const label = computed(
         align="start"
         :side-offset="6"
         :collision-padding="12"
-        aria-label="选择初始角色"
+        aria-label="选择角色"
         ><RolePicker
           v-model="model"
           :roles="roles"

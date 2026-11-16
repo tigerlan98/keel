@@ -7,7 +7,7 @@ const props = withDefaults(
   defineProps<{
     open: boolean
     title: string
-    size?: 'sm' | 'md' | 'lg'
+    size?: 'sm' | 'md' | 'lg' | 'confirm'
     initialFocusId?: string
   }>(),
   {
@@ -22,6 +22,7 @@ const sizeClass = computed(
   () =>
     ({
       sm: 'max-w-[420px]',
+      confirm: 'max-w-[440px]',
       md: 'max-w-[560px]',
       lg: 'max-w-[680px]',
     })[props.size],

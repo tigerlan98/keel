@@ -196,27 +196,29 @@ test('下拉框支持键盘、空值选项和数字分页值', async ({ page }) 
   expect(requests.at(-1)!.searchParams.get('page')).toBe('1')
 })
 
-test('弹窗内下拉浮层可操作，Escape 只关闭下拉框', async ({ page }, testInfo) => {
+test('角色弹窗状态开关可操作，Escape 关闭弹窗', async ({ page }, testInfo) => {
   await page.addInitScript(() => localStorage.setItem('keel.appearance.theme', 'dark'))
   await mockControls(page)
+  await page.route('**/api/v1/admin/iam/resources/tree*', (route) => route.fulfill(ok([])))
+  await page.route('**/api/v1/admin/iam/users*', (route) =>
+    route.fulfill(ok({ items: users, total: users.length, page: 1, size: 100 })),
+  )
+  await page.route('**/api/v1/admin/iam/roles/*/resources', (route) =>
+    route.fulfill(ok({ resourceIds: [] })),
+  )
   await page.goto('/iam/roles')
   await page.getByRole('button', { name: '新增角色', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: '新增角色' })
-  const status = dialog.getByRole('combobox', { name: '状态', exact: true })
+  const status = dialog.getByRole('switch', { name: '角色启用状态', exact: true })
+  await expect(status).toBeChecked()
   await status.click()
-  await expect(page.getByRole('option', { name: '禁用', exact: true })).toBeVisible()
+  await expect(status).not.toBeChecked()
   await page.screenshot({
     path: testInfo.outputPath('modal-select-dark.png'),
     animations: 'disabled',
   })
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('listbox')).toHaveCount(0)
-  await expect(dialog).toBeVisible()
-  await expect(status).toBeFocused()
-  await status.click()
-  await page.getByRole('option', { name: '禁用', exact: true }).click()
-  await expect(status).toContainText('禁用')
-  await expect(dialog).toBeVisible()
+  await expect(dialog).not.toBeVisible()
 })
 
 for (const theme of ['light', 'dark'] as const) {

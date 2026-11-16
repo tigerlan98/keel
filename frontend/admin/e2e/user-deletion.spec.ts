@@ -57,6 +57,7 @@ test('取消不删除；确认永久删除后空末页回退', async ({ page }, 
   const dialog = page.getByRole('dialog', { name: '删除用户', exact: true })
   await expect(dialog).toContainText('此操作不可恢复')
   await dialog.getByRole('button', { name: '取消', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
   expect(mock.deleteCount()).toBe(0)
   await page.getByRole('button', { name: '删除', exact: true }).click()
   await expect(dialog).toBeVisible()
@@ -64,7 +65,7 @@ test('取消不删除；确认永久删除后空末页回退', async ({ page }, 
     path: testInfo.outputPath('user-delete-confirm.png'),
     animations: 'disabled',
   })
-  await dialog.getByRole('button', { name: '删除用户', exact: true }).click()
+  await dialog.getByRole('button', { name: '删除', exact: true }).click()
   await expect(dialog).not.toBeVisible()
   await expect.poll(() => mock.requests.at(-1)?.searchParams.get('page')).toBe('1')
   expect(mock.deleteCount()).toBe(1)
@@ -78,10 +79,12 @@ test('删除失败保留确认框与错误反馈', async ({ page }) => {
   await page.getByRole('button', { name: '下一页' }).click()
   await page.getByRole('button', { name: '删除', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: '删除用户', exact: true })
-  await dialog.getByRole('button', { name: '删除用户', exact: true }).click()
+  await dialog.getByRole('button', { name: '删除', exact: true }).click()
   await expect(dialog.getByRole('alert')).toHaveText('数据已变更，请刷新后重试')
-  await expect(dialog.getByRole('button', { name: '删除用户', exact: true })).toBeEnabled()
+  await expect(dialog.getByRole('button', { name: '删除', exact: true })).toBeEnabled()
   expect(mock.deleteCount()).toBe(1)
+  await dialog.getByRole('button', { name: '取消', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
   await expect(page.getByRole('cell', { name: '运营账号 @operator', exact: true })).toBeVisible()
 })
 

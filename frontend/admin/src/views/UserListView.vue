@@ -7,7 +7,8 @@ import {
   Plus,
   RefreshCw,
   Search,
-  ShieldCheck,
+  Shield,
+  TriangleAlert,
   Trash2,
 } from '@lucide/vue'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -58,6 +59,13 @@ const initialStatus = ref<UserStatus>('ENABLED')
 const passwordVisible = ref(false)
 const roleOptionsError = ref('')
 const canReadRoles = computed(() => auth.hasPermission('iam:role:list'))
+const canAssignRoles = computed(() => auth.hasPermission('iam:user:assign-role'))
+const formRoleOptions = computed(() => [
+  ...roleOptions.value,
+  ...(editing.value?.roles ?? []).filter(
+    (role) => !roleOptions.value.some((option) => option.id === role.id),
+  ),
+])
 async function chooseDepartment(value: number | undefined) {
   selectedDepartment.value = value
   page.value = 1
@@ -351,7 +359,7 @@ async function loadRoleOptions(): Promise<void> {
     const result = await fetchRoles({ page: 1, size: 100, sort: 'sort,asc', status: 'ENABLED' })
     roleOptions.value = result.items
   } catch {
-    roleOptionsError.value = '角色加载失败，可稍后重试或创建后再分配'
+    roleOptionsError.value = '角色加载失败，请重试'
     roleOptions.value = []
   } finally {
     roleOptionsLoading.value = false
@@ -402,9 +410,10 @@ async function openEdit(user: UserSummary): Promise<void> {
         departmentId: detail.departmentId,
       },
     })
-    roleIds.value = []
+    roleIds.value = detail.roles.map((role) => role.id)
     formOpen.value = true
     void loadDepartments()
+    void loadRoleOptions()
   } catch (caught) {
     toast.show(caught instanceof ApiError ? caught.message : '加载用户失败', 'error')
   }
@@ -417,16 +426,30 @@ const saveUser = handleSubmit(async (values) => {
     return
   }
   saving.value = true
+  let profileSaved = false
   try {
     if (editing.value) {
-      await updateUserProfile(editing.value.id, {
+      const rolesChanged =
+        canReadRoles.value &&
+        canAssignRoles.value &&
+        (roleIds.value.length !== editing.value.roles.length ||
+          editing.value.roles.some((role) => !roleIds.value.includes(role.id)))
+      if (rolesChanged && (roleOptionsLoading.value || roleOptionsError.value)) {
+        formError.value = '请先完成角色加载后再保存'
+        return
+      }
+      editing.value = await updateUserProfile(editing.value.id, {
         nickname: values.nickname.trim(),
         email: values.email.trim() || null,
         phone: values.phone.trim() || null,
         version: editing.value.version,
         departmentId: values.departmentId,
       })
-      toast.show('用户资料已更新', 'success')
+      profileSaved = true
+      if (rolesChanged) {
+        await assignUserRoles(editing.value.id, roleIds.value)
+      }
+      toast.show('用户信息已更新', 'success')
     } else {
       await createUser({
         username: values.username.trim(),
@@ -438,12 +461,15 @@ const saveUser = handleSubmit(async (values) => {
         departmentId: values.departmentId,
         status: initialStatus.value,
       })
-      toast.show('用户已创建', 'success')
+      toast.show('用户已新增', 'success')
     }
     formOpen.value = false
     await load()
   } catch (caught) {
-    if (caught instanceof ApiError) {
+    if (profileSaved) {
+      formError.value = `用户资料已保存，角色保存失败：${caught instanceof ApiError ? caught.message : '请稍后重试'}。可再次保存重试。`
+      await load()
+    } else if (caught instanceof ApiError) {
       if (!applyFieldErrors(caught)) {
         formError.value = caught.message
       }
@@ -697,7 +723,7 @@ onMounted(() => {
                 title="编辑"
                 @click="openEdit(row)"
               >
-                <Pencil :size="14" aria-hidden="true" />
+                <Pencil :size="16" :stroke-width="1.6" aria-hidden="true" />
               </AppButton>
               <AppButton
                 v-permission="'iam:user:assign-role'"
@@ -707,7 +733,7 @@ onMounted(() => {
                 title="分配角色"
                 @click="openRoles(row)"
               >
-                <ShieldCheck :size="14" aria-hidden="true" />
+                <Shield :size="16" :stroke-width="1.6" aria-hidden="true" />
               </AppButton>
               <AppButton
                 v-permission="'iam:user:reset-password'"
@@ -717,19 +743,21 @@ onMounted(() => {
                 title="重置密码"
                 @click="openPassword(row)"
               >
-                <KeyRound :size="14" aria-hidden="true" />
+                <KeyRound :size="16" :stroke-width="1.6" aria-hidden="true" />
               </AppButton>
               <AppButton
                 v-permission="'iam:user:delete'"
+                :press-animation="false"
                 variant="ghost"
+                class="transition-none! hover:bg-destructive/10! hover:text-destructive! active:bg-destructive/15! active:text-destructive! focus-visible:text-destructive! focus-visible:ring-destructive/30!"
                 size="icon-sm"
                 aria-label="删除"
                 :title="protectedUser(row) ? '当前登录账号或超级管理员账号不可删除' : '删除'"
                 :disabled="protectedUser(row) || deletePreparing !== undefined || deleting"
-                :loading="deletePreparing === row.id"
+                :aria-busy="deletePreparing === row.id"
                 @click="requestDelete(row)"
               >
-                <Trash2 :size="14" aria-hidden="true" />
+                <Trash2 :size="16" :stroke-width="1.6" aria-hidden="true" />
               </AppButton>
             </div>
           </template>
@@ -878,13 +906,22 @@ onMounted(() => {
             :disabled="departmentsLoading"
             :preserve-id="editing?.departmentId"
         /></AppField>
-        <AppField v-if="!editing" label="角色" hint="选填；未分配角色不具备角色授予的业务权限"
+        <AppField
+          label="角色"
+          :hint="
+            editing && (!canReadRoles || !canAssignRoles)
+              ? '当前角色操作权限不足，仅可查看'
+              : '选填；未分配角色不具备角色授予的业务权限'
+          "
           ><RoleSelect
-            v-if="canReadRoles"
+            v-if="(!editing && canReadRoles) || (editing && canReadRoles && canAssignRoles)"
             v-model="roleIds"
-            :roles="roleOptions"
-            :disabled="roleOptionsLoading"
+            :roles="formRoleOptions"
+            :disabled="roleOptionsLoading || !!roleOptionsError || saving"
           />
+          <p v-else-if="editing" class="py-2 text-xs text-ink-muted">
+            {{ editing.roles.map((role) => role.name).join('、') || '未分配角色' }}
+          </p>
           <p v-else class="py-2 text-xs text-ink-soft">可在创建后由有权限的管理员分配角色</p>
           <p v-if="roleOptionsError" role="alert" class="text-xs text-destructive">
             {{ roleOptionsError
@@ -892,21 +929,21 @@ onMounted(() => {
           </p></AppField
         >
         <AppField v-if="!editing" label="账号状态"
-          ><div class="flex h-9 items-center gap-3">
+          ><div class="inline-flex items-center gap-2.5">
             <button
               type="button"
               role="switch"
               :aria-checked="initialStatus === 'ENABLED'"
               aria-label="账号启用状态"
-              class="relative h-5 w-9 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+              class="relative h-[22px] w-[38px] shrink-0 rounded-full shadow-[inset_0_1px_2px_rgba(16,20,24,0.14)] transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
               :class="initialStatus === 'ENABLED' ? 'bg-brand-bright' : 'bg-ink/20'"
               @click="initialStatus = initialStatus === 'ENABLED' ? 'DISABLED' : 'ENABLED'"
             >
               <span
-                class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-[left]"
+                class="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow-[0_1px_3px_rgba(16,20,24,0.22),0_2px_6px_rgba(16,20,24,0.1)] transition-[left]"
                 :class="initialStatus === 'ENABLED' ? 'left-[18px]' : 'left-0.5'"
               /></button
-            ><span class="text-xs text-ink-muted">{{
+            ><span class="text-[13px] text-ink-muted">{{
               initialStatus === 'ENABLED' ? '启用，允许登录' : '禁用，暂不允许登录'
             }}</span>
           </div></AppField
@@ -999,12 +1036,25 @@ onMounted(() => {
       </AppButton>
     </template>
   </AppDialog>
-  <AppDialog :open="!!deleteTarget" title="删除用户" size="sm" @close="closeDelete">
-    <p class="text-[13px] leading-6 text-ink-muted">
-      确定永久删除用户「{{ deleteTarget?.nickname || deleteTarget?.username }}」 （@{{
-        deleteTarget?.username
-      }}）吗？删除后该账号及角色关联将被移除，全部登录会话立即失效，此操作不可恢复。
-    </p>
+  <AppDialog
+    :open="!!deleteTarget"
+    title="删除用户"
+    size="confirm"
+    initial-focus-id="user-delete-cancel"
+    @close="closeDelete"
+  >
+    <div class="flex items-start gap-3.5">
+      <span
+        class="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive"
+      >
+        <TriangleAlert :size="18" :stroke-width="1.8" aria-hidden="true" />
+      </span>
+      <p class="min-w-0 break-words pt-0.5 text-[13.5px] leading-[1.6] text-ink-muted">
+        确认删除用户「{{ deleteTarget?.nickname || deleteTarget?.username }}」（@{{
+          deleteTarget?.username
+        }}）吗？账号及角色关联将被移除，全部登录会话立即失效，此操作不可恢复。
+      </p>
+    </div>
     <p
       v-if="deleteError"
       class="mt-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-[12px] leading-5 text-destructive"
@@ -1013,8 +1063,18 @@ onMounted(() => {
       {{ deleteError }}
     </p>
     <template #footer>
-      <AppButton variant="outline" :disabled="deleting" @click="closeDelete">取消</AppButton>
-      <AppButton variant="danger" :loading="deleting" @click="confirmDelete">删除用户</AppButton>
+      <AppButton id="user-delete-cancel" variant="ghost" :disabled="deleting" @click="closeDelete"
+        >取消</AppButton
+      >
+      <AppButton
+        variant="danger"
+        :press-animation="false"
+        class="transition-none! bg-[#ff5a50]! shadow-[0_1px_2px_rgba(150,40,34,0.26),0_8px_18px_rgba(255,90,80,0.24)] hover:bg-[#f14c42]! active:bg-[#dc4038]! focus-visible:ring-destructive/30!"
+        :disabled="deleting"
+        :aria-busy="deleting"
+        @click="confirmDelete"
+        >{{ deleting ? '删除中…' : '删除' }}</AppButton
+      >
     </template>
   </AppDialog>
 </template>

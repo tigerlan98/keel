@@ -46,6 +46,7 @@ type Props = {
   icon?: Component
   loading?: boolean
   disabled?: boolean
+  pressAnimation?: boolean
   type?: 'button' | 'submit' | 'reset'
   variant?: ButtonVariant
   size?: ButtonSize
@@ -55,6 +56,7 @@ const props = withDefaults(defineProps<Props>(), {
   icon: undefined,
   loading: false,
   disabled: false,
+  pressAnimation: true,
   type: 'button',
   variant: 'primary',
   size: 'md',
@@ -70,7 +72,8 @@ const classes = computed(() => cn(buttonVariants({ variant: props.variant, size:
     :disabled="disabled || loading"
     :aria-busy="loading"
     :class="classes"
-    :data-press-ripple="['primary', 'brand', 'danger'].includes(variant)"
+    :data-press-animation="pressAnimation"
+    :data-press-ripple="pressAnimation && ['primary', 'brand', 'danger'].includes(variant)"
   >
     <LoaderCircle v-if="loading" :size="14" class="shrink-0 animate-spin" aria-hidden="true" />
     <component :is="icon" v-else-if="icon" :size="14" class="shrink-0" aria-hidden="true" />
