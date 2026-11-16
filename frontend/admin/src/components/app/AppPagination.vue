@@ -12,10 +12,12 @@ const props = withDefaults(
     total: number
     loading?: boolean
     pageSizes?: number[]
+    appearance?: 'default' | 'user-list'
   }>(),
   {
     loading: false,
     pageSizes: () => [10, 20, 50, 100],
+    appearance: 'default',
   },
 )
 
@@ -78,8 +80,16 @@ function changePageSize(value: string | number | undefined): void {
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center justify-between gap-3 text-[12px]">
-    <div class="flex items-center gap-2 text-ink-soft">
+  <nav
+    aria-label="分页"
+    class="flex flex-wrap items-center justify-between gap-3 text-[12px]"
+    :class="appearance === 'user-list' && 'user-list-pagination'"
+  >
+    <div v-if="appearance === 'user-list'" class="pagination-summary text-ink-soft">
+      共 <strong class="text-ink">{{ total }}</strong> 条，当前
+      <strong class="tnum text-ink">{{ rangeStart }}–{{ rangeEnd }}</strong>
+    </div>
+    <div v-else class="flex items-center gap-2 text-ink-soft">
       <span>第 {{ rangeStart }}–{{ rangeEnd }} 条</span>
       <span class="text-ink-faint">·</span>
       <span class="tnum">{{ page }} / {{ totalPages }}</span>
@@ -87,13 +97,19 @@ function changePageSize(value: string | number | undefined): void {
 
     <div class="flex items-center gap-2">
       <label class="flex items-center gap-1.5 text-ink-soft">
-        每页
-        <span class="w-[70px]">
+        <span v-if="appearance === 'default'">每页</span>
+        <span :class="appearance === 'user-list' ? 'w-[110px]' : 'w-[70px]'">
           <AppSelect
             :model-value="pageSize"
             size="sm"
             aria-label="每页条数"
-            :options="pageSizes.map((size) => ({ label: String(size), value: size }))"
+            :options="
+              pageSizes.map((size) => ({
+                label: appearance === 'user-list' ? `${size} 条/页` : String(size),
+                value: size,
+              }))
+            "
+            :disabled="loading"
             @update:model-value="changePageSize"
           />
         </span>
@@ -123,6 +139,8 @@ function changePageSize(value: string | number | undefined): void {
               : 'text-ink-muted hover:bg-ink/5 hover:text-ink'
           "
           :aria-current="item === page ? 'page' : undefined"
+          :aria-label="`第 ${item} 页`"
+          :disabled="loading"
           @click="go(item)"
         >
           {{ item }}
@@ -140,5 +158,45 @@ function changePageSize(value: string | number | undefined): void {
         <ChevronRight :size="15" aria-hidden="true" />
       </button>
     </div>
-  </div>
+  </nav>
 </template>
+
+<style scoped>
+.user-list-pagination {
+  min-height: 38px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.user-list-pagination .pagination-summary strong {
+  font-weight: 650;
+}
+
+.user-list-pagination button {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.user-list-pagination :deep(.app-select-trigger) {
+  height: 36px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.user-list-pagination button[aria-current='page'] {
+  border: 1px solid var(--surface-edge);
+  background: var(--pill-surface);
+  box-shadow: var(--shadow-e1);
+  color: var(--ink);
+}
+
+.user-list-pagination button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.user-list-pagination button:disabled {
+  pointer-events: none;
+  opacity: 0.35;
+}
+</style>

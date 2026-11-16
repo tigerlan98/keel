@@ -117,6 +117,20 @@ public class UserController {
         return Result.success(toDetail(userApplicationService.detail(id)));
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(
+            operationId = "deleteUser",
+            summary = "永久删除用户",
+            description = "version为必填非负数；禁止删除当前账号及拥有SUPER_ADMIN角色的账号。删除用户及角色关联，吊销全部会话、清理权限缓存，保留历史审计日志。")
+    @ApiResponse(responseCode = "204", description = "用户已删除，无响应体")
+    @PreAuthorize("@perm.has('iam:user:delete')")
+    @OperationLog(module = "iam", action = "DELETE")
+    public ResponseEntity<Void> delete(
+            @PathVariable @Min(1) long id, @RequestParam @Min(0) int version) {
+        userApplicationService.delete(id, version);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(
             operationId = "createUser",
             summary = "创建用户",

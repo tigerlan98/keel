@@ -178,6 +178,7 @@
 | DELETE | `/api/v1/admin/iam/users/{id}/sessions` | `iam:user:force-logout` | 踢出全部端 |
 | DELETE | `/api/v1/admin/iam/users/{id}/sessions/{device}` | `iam:user:force-logout` | 踢出指定端 |
 | PUT | `/api/v1/admin/iam/users/{id}/profile` | `iam:user:update` | 原子保存完整资料与部门 |
+| DELETE | `/api/v1/admin/iam/users/{id}` | `iam:user:delete` | 永久删除用户，version 必传 |
 | GET | `/api/v1/admin/iam/departments/tree` | `iam:department:list` | 部门管理树 |
 | GET | `/api/v1/admin/iam/departments/options` | 见第17节最小授权 | 部门选择与用户筛选 |
 | GET | `/api/v1/admin/iam/departments/{id}` | `iam:department:list` | 部门详情 |
@@ -454,6 +455,14 @@
 ### 5.11 `PUT /api/v1/admin/iam/users/{id}/profile`
 
 权限 `iam:user:update`。profile 为单例子资源；全量提交 nickname、email、phone、departmentId、version，邮箱/手机可显式 null，字段缺失400；部门为正数且必填，原子保存资料与归属。用户名、角色、状态和密码不可通过此端点修改。200 + UserDetail，版本冲突409；已有停用部门不变时允许改其他资料，新的归属必须启用。完整请求/响应及兼容细则见 07 §6。
+
+### 5.12 `DELETE /api/v1/admin/iam/users/{id}?version={version}`
+
+**权限**：`iam:user:delete`。`id` 为正数，`version` 为必填非负整数，来自用户详情。成功返回 204，无 body。
+
+永久删除用户与角色关联，保留角色、部门及历史审计日志；注销全部设备会话并失效用户权限缓存。禁止删除当前登录账号及任何拥有 `SUPER_ADMIN` 角色的账号（不依赖角色启停状态）。按用户行锁与角色分配串行化，版本不匹配拒绝删除；删除动作记 `iam/DELETE`。账号删除后用户名可重新使用，新账号获得新的自增 ID；历史日志仍指向原 ID。
+
+错误：`IAM_USER_NOT_FOUND` 404、`IAM_USER_PROTECTED` 409、`COMMON_OPTIMISTIC_LOCK` 409；无删除权限返回 403，缺失或非法参数返回 400。前端二次确认明确不可恢复；失败保留确认框并展示错误，成功刷新列表、空末页回退。
 
 ## 6. 角色管理
 
@@ -735,6 +744,7 @@
 | `AUTH_CSRF_INVALID` | 403 | CSRF 校验失败 |
 | `AUTH_PASSWORD_CHANGE_REQUIRED` | 403 | 必须先修改密码 |
 | `IAM_USER_NOT_FOUND` | 404 | 用户不存在 |
+| `IAM_USER_PROTECTED` | 409 | 当前登录账号或拥有 SUPER_ADMIN 角色的账号不可删除 |
 | `IAM_USERNAME_EXISTS` | 409 | 用户名已存在 |
 | `IAM_ROLE_NOT_FOUND` | 404 | 角色不存在 |
 | `IAM_ROLE_CODE_EXISTS` | 409 | 角色编码已存在 |

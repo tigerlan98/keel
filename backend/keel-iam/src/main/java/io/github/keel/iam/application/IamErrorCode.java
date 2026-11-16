@@ -17,6 +17,7 @@ public enum IamErrorCode implements ErrorCode {
     DEPARTMENT_IN_USE("IAM_DEPARTMENT_IN_USE", 409, "部门仍有关联用户，请先调整用户归属"),
     DEPARTMENT_PROTECTED("IAM_DEPARTMENT_PROTECTED", 409, "根部门不允许此操作"),
     USER_NOT_FOUND("IAM_USER_NOT_FOUND", 404, "用户不存在"),
+    USER_PROTECTED("IAM_USER_PROTECTED", 409, "当前登录账号或超级管理员账号不可删除"),
     USERNAME_EXISTS("IAM_USERNAME_EXISTS", 409, "用户名已存在"),
     ROLE_NOT_FOUND("IAM_ROLE_NOT_FOUND", 404, "角色不存在"),
     ROLE_CODE_EXISTS("IAM_ROLE_CODE_EXISTS", 409, "角色编码已存在"),

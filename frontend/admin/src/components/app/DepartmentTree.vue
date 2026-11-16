@@ -5,7 +5,7 @@ import type { DepartmentOption } from '@/api/departments'
 import { flattenDepartments } from '@/lib/departments'
 import AppInput from './AppInput.vue'
 const props = defineProps<{ nodes: DepartmentOption[] }>()
-const model = defineModel<number | 'unassigned'>()
+const model = defineModel<number>()
 const search = ref('')
 const collapsed = ref(new Set<number>())
 const rows = computed(() => {
@@ -46,28 +46,19 @@ function toggle(id: number) {
     <div class="max-h-[60vh] space-y-0.5 overflow-y-auto pt-2">
       <button
         type="button"
-        class="w-full rounded-lg px-3 py-2 text-left text-[13px] hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-brand"
-        :class="model === undefined ? 'bg-brand/10 font-semibold text-brand' : 'text-ink-muted'"
+        class="w-full rounded-lg py-2 pl-6 pr-2 text-left text-[13px] hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-brand"
+        :class="model === undefined ? 'bg-brand/10 font-[620] text-brand' : 'text-ink'"
         :aria-current="model === undefined ? 'true' : undefined"
         @click="model = undefined"
       >
         全部部门
       </button>
-      <button
-        type="button"
-        class="w-full rounded-lg px-3 py-2 text-left text-[13px] hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-brand"
-        :class="model === 'unassigned' ? 'bg-brand/10 font-semibold text-brand' : 'text-ink-muted'"
-        :aria-current="model === 'unassigned' ? 'true' : undefined"
-        @click="model = 'unassigned'"
-      >
-        未分配部门
-      </button>
       <div
         v-for="row in rows"
         :key="row.id"
-        class="flex items-center rounded-lg"
+        class="flex min-h-9 items-center rounded-lg hover:bg-ink/5"
         :class="model === row.id && 'bg-brand/10'"
-        :style="{ paddingLeft: `${row.depth * 14}px` }"
+        :style="{ paddingLeft: `${row.depth * 16}px` }"
       >
         <button
           v-if="row.children.length"
@@ -88,7 +79,7 @@ function toggle(id: number) {
         <button
           type="button"
           class="min-w-0 flex-1 truncate rounded-lg py-2 pr-2 text-left text-[13px] hover:text-brand focus-visible:outline-2 focus-visible:outline-brand"
-          :class="model === row.id ? 'font-semibold text-brand' : 'text-ink'"
+          :class="model === row.id ? 'font-[620] text-brand' : 'text-ink'"
           :aria-current="model === row.id ? 'true' : undefined"
           :title="row.path"
           @click="model = row.id"

@@ -1,6 +1,5 @@
 package io.github.keel.iam.application.authentication;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.github.keel.common.core.event.LoginAction;
 import io.github.keel.common.core.event.LoginLogEvent;
 import io.github.keel.common.core.exception.BusinessException;
@@ -18,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -38,14 +38,15 @@ public class AuthApplicationService {
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional(noRollbackFor = BusinessException.class)
     public AuthSession login(LoginCommand command) {
         if (loginAttemptLimiter.isLocked(command.username(), command.ip())) {
             publishLoginLog(null, command.username(), command, LoginAction.LOGIN_FAILED, false, "TOO_MANY_ATTEMPTS");
             throw new BusinessException(AuthErrorCode.AUTH_TOO_MANY_ATTEMPTS);
         }
 
-        IamUserPO user = userMapper.selectOne(Wrappers.<IamUserPO>lambdaQuery()
-                .eq(IamUserPO::getUsername, command.username()));
+        // 持有共享锁直到签发会话完成，永久删除将等待此次登录结束。
+        IamUserPO user = userMapper.shareByUsername(command.username());
 
         if (user == null) {
             loginAttemptLimiter.recordFailure(command.username(), command.ip());

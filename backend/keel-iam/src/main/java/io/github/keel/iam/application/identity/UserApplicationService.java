@@ -2,6 +2,7 @@ package io.github.keel.iam.application.identity;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
+import io.github.keel.common.core.auth.CurrentUserProvider;
 import io.github.keel.common.core.error.CommonErrorCode;
 import io.github.keel.common.core.exception.BusinessException;
 import io.github.keel.common.security.token.TokenService;
@@ -26,11 +27,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** 用户维护：创建、资料更新、启停、重置密码、角色分配与强制下线。 */
+/** 用户维护：创建、资料更新、启停、重置密码、角色分配、强制下线与受保护的永久删除。 */
 @Service
 @RequiredArgsConstructor
 public class UserApplicationService {
@@ -45,6 +47,7 @@ public class UserApplicationService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final AuthorizationCacheEvictor cacheEvictor;
+    private final CurrentUserProvider currentUserProvider;
 
     public UserDetailView detail(long id) {
         IamUserPO user = requireUser(id);
@@ -170,12 +173,36 @@ public class UserApplicationService {
 
     @Transactional
     public void replaceRoles(long userId, List<Long> roleIds) {
-        requireUser(userId);
+        requireLockedUser(userId);
         Set<Long> uniqueIds = validateRoleIds(roleIds);
 
         userRoleMapper.delete(
                 Wrappers.<IamUserRolePO>lambdaQuery().eq(IamUserRolePO::getUserId, userId));
         uniqueIds.forEach(roleId -> insertUserRole(userId, roleId));
+        cacheEvictor.evictUser(userId);
+    }
+
+    @Transactional
+    public void delete(long userId, int version) {
+        IamUserPO user = requireLockedUser(userId);
+        if (Objects.equals(currentUserProvider.currentUserId(), userId)
+                || userMapper.countProtectedRole(userId) > 0) {
+            throw new BusinessException(IamErrorCode.USER_PROTECTED);
+        }
+        if (!Objects.equals(user.getVersion(), version)) {
+            throw new BusinessException(CommonErrorCode.OPTIMISTIC_LOCK);
+        }
+        userRoleMapper.delete(
+                Wrappers.<IamUserRolePO>lambdaQuery().eq(IamUserRolePO::getUserId, userId));
+        if (userMapper.delete(
+                        Wrappers.<IamUserPO>lambdaQuery()
+                                .eq(IamUserPO::getId, userId)
+                                .eq(IamUserPO::getVersion, version))
+                == 0) {
+            throw new BusinessException(CommonErrorCode.OPTIMISTIC_LOCK);
+        }
+        // 清理失败时让数据库事务回滚；已吊销的会话不恢复。
+        tokenService.revokeAll(userId);
         cacheEvictor.evictUser(userId);
     }
 
@@ -222,6 +249,14 @@ public class UserApplicationService {
 
     private IamUserPO requireUser(long id) {
         IamUserPO user = userMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException(IamErrorCode.USER_NOT_FOUND);
+        }
+        return user;
+    }
+
+    private IamUserPO requireLockedUser(long id) {
+        IamUserPO user = userMapper.lockById(id);
         if (user == null) {
             throw new BusinessException(IamErrorCode.USER_NOT_FOUND);
         }

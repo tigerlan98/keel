@@ -6,17 +6,14 @@ import type { DepartmentOption } from '@/api/departments'
 import { flattenDepartments } from '@/lib/departments'
 import DepartmentTree from './DepartmentTree.vue'
 const props = defineProps<{ nodes: DepartmentOption[] }>()
-const model = defineModel<number | 'unassigned'>()
+const model = defineModel<number>()
 const open = ref(false)
 const label = computed(() =>
   model.value === undefined
     ? '全部部门'
-    : model.value === 'unassigned'
-      ? '未分配部门'
-      : (flattenDepartments(props.nodes).find((row) => row.id === model.value)?.name ??
-        '请选择部门'),
+    : (flattenDepartments(props.nodes).find((row) => row.id === model.value)?.name ?? '请选择部门'),
 )
-function choose(value: number | 'unassigned' | undefined) {
+function choose(value: number | undefined) {
   model.value = value
   open.value = false
 }

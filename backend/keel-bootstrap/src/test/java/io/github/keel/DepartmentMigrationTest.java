@@ -27,7 +27,7 @@ class DepartmentMigrationTest {
                 try (var files = Files.list(directory)) {
                     for (Path file :
                             files.filter(path -> path.toString().endsWith(".sql")).toList()) {
-                        if (!file.getFileName().toString().matches("V(1006|1007|9005)__.*"))
+                        if (!file.getFileName().toString().matches("V(1006|1007|9005|9006)__.*"))
                             Files.copy(file, legacy.resolve(file.getFileName()));
                     }
                 }
@@ -51,7 +51,7 @@ class DepartmentMigrationTest {
                             .locations(locations)
                             .outOfOrder(true)
                             .load();
-            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(3);
+            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(4);
             assertThat(upgrade.migrate().migrationsExecuted).isZero();
             Flyway.configure()
                     .dataSource(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword())

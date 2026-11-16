@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import {
-  Ban,
   Eye,
   EyeOff,
-  CircleCheck,
   KeyRound,
-  LogOut,
   Pencil,
   Plus,
   RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
 } from '@lucide/vue'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
@@ -23,16 +21,13 @@ import type { RoleSummary, UserDetail, UserStatus, UserSummary } from '@/api/typ
 import {
   assignUserRoles,
   createUser,
+  deleteUser,
   fetchUser,
   fetchUsers,
-  forceLogout,
-  forceLogoutDevice,
   resetUserPassword,
   updateUserProfile,
-  updateUserStatus,
 } from '@/api/users'
 import AppButton from '@/components/app/AppButton.vue'
-import AppConfirm from '@/components/app/AppConfirm.vue'
 import AppDataTable from '@/components/app/AppDataTable.vue'
 import AppDialog from '@/components/app/AppDialog.vue'
 import AppErrorState from '@/components/app/AppErrorState.vue'
@@ -58,12 +53,12 @@ import { useToastStore } from '@/stores/toast'
 const toast = useToastStore()
 const auth = useAuthStore()
 const { departments, departmentsLoading, departmentsError, loadDepartments } = useDepartments()
-const selectedDepartment = ref<number | 'unassigned'>()
+const selectedDepartment = ref<number>()
 const initialStatus = ref<UserStatus>('ENABLED')
 const passwordVisible = ref(false)
 const roleOptionsError = ref('')
 const canReadRoles = computed(() => auth.hasPermission('iam:role:list'))
-async function chooseDepartment(value: number | 'unassigned' | undefined) {
+async function chooseDepartment(value: number | undefined) {
   selectedDepartment.value = value
   page.value = 1
   await load()
@@ -88,21 +83,69 @@ const filters = reactive({
 })
 
 const page = ref(1)
-const size = ref(20)
-const sort = ref('createdAt,desc')
+const size = ref(10)
 const items = ref<UserSummary[]>([])
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
+const deleteTarget = ref<UserDetail | null>(null)
+const deletePreparing = ref<number>()
+const deleting = ref(false)
+const deleteError = ref('')
+
+function protectedUser(user: UserSummary): boolean {
+  return user.id === auth.user?.id || user.roles?.some((role) => role.code === 'SUPER_ADMIN')
+}
+
+async function requestDelete(user: UserSummary): Promise<void> {
+  if (protectedUser(user) || deletePreparing.value !== undefined || deleting.value) return
+  deletePreparing.value = user.id
+  deleteError.value = ''
+  try {
+    const detail = await fetchUser(user.id)
+    if (protectedUser(detail)) {
+      toast.show('当前登录账号或超级管理员账号不可删除', 'error')
+      return
+    }
+    deleteTarget.value = detail
+  } catch (caught) {
+    toast.show(caught instanceof ApiError ? caught.message : '加载用户失败，请重试', 'error')
+  } finally {
+    deletePreparing.value = undefined
+  }
+}
+
+function closeDelete(): void {
+  if (deleting.value) return
+  deleteTarget.value = null
+  deleteError.value = ''
+}
+
+async function confirmDelete(): Promise<void> {
+  const target = deleteTarget.value
+  if (!target || deleting.value) return
+  deleting.value = true
+  deleteError.value = ''
+  try {
+    await deleteUser(target.id, target.version)
+    deleteTarget.value = null
+    toast.show('用户已删除', 'success')
+    await load()
+  } catch (caught) {
+    deleteError.value = caught instanceof ApiError ? caught.message : '删除失败，请稍后重试'
+  } finally {
+    deleting.value = false
+  }
+}
 
 const columns = [
   { key: 'username', label: '用户' },
   { key: 'departmentName', label: '部门' },
   { key: 'roles', label: '角色' },
   { key: 'phone', label: '手机号' },
-  { key: 'status', label: '状态' },
-  { key: 'createdAt', label: '创建时间' },
-  { key: 'actions', label: '操作', align: 'right' as const, sticky: true, width: '208px' },
+  { key: 'status', label: '状态', width: '104px' },
+  { key: 'createdAt', label: '创建时间', width: '168px' },
+  { key: 'actions', label: '操作', align: 'right' as const, sticky: true, width: '176px' },
 ]
 
 const roleOptions = ref<RoleSummary[]>([])
@@ -243,28 +286,6 @@ const {
 } = passwordForm
 const [newPassword, newPasswordAttrs] = definePasswordField('newPassword')
 
-const statusTarget = ref<UserSummary | null>(null)
-const statusSaving = ref(false)
-
-const statusConfirmTitle = computed(() =>
-  statusTarget.value?.status === 'ENABLED' ? '禁用用户' : '启用用户',
-)
-const statusConfirmAction = computed(() =>
-  statusTarget.value?.status === 'ENABLED' ? '禁用' : '启用',
-)
-const statusConfirmMessage = computed(() => {
-  const user = statusTarget.value
-  if (!user) {
-    return ''
-  }
-  return user.status === 'ENABLED'
-    ? `确定禁用用户「${user.username}」吗？禁用后该用户将无法登录。`
-    : `确定启用用户「${user.username}」吗？启用后该用户可以重新登录。`
-})
-
-const logoutTarget = ref<UserSummary | null>(null)
-const loggingOut = ref(false)
-
 let requestGeneration = 0
 async function load(): Promise<void> {
   const generation = ++requestGeneration
@@ -274,16 +295,20 @@ async function load(): Promise<void> {
     const result = await fetchUsers({
       page: page.value,
       size: size.value,
-      sort: sort.value,
+      sort: 'createdAt,desc',
       keyword: filters.username.trim() || undefined,
       departmentId:
         typeof selectedDepartment.value === 'number' ? selectedDepartment.value : undefined,
-      unassignedDepartment: selectedDepartment.value === 'unassigned' || undefined,
       status: filters.status ? (filters.status as UserStatus) : undefined,
     })
     if (generation !== requestGeneration) return
     items.value = result.items
     total.value = result.total
+    const lastPage = Math.max(1, Math.ceil(result.total / size.value))
+    if (page.value > lastPage) {
+      page.value = lastPage
+      await load()
+    }
   } catch (caught) {
     if (generation !== requestGeneration) return
     items.value = []
@@ -303,7 +328,6 @@ function resetFilters(): void {
   selectedDepartment.value = undefined
   filters.username = ''
   filters.status = ''
-  sort.value = 'createdAt,desc'
   page.value = 1
   void load()
 }
@@ -431,30 +455,6 @@ const saveUser = handleSubmit(async (values) => {
   }
 })
 
-function requestToggleStatus(user: UserSummary): void {
-  statusTarget.value = user
-}
-
-async function confirmToggleStatus(): Promise<void> {
-  const target = statusTarget.value
-  if (!target) {
-    return
-  }
-  statusSaving.value = true
-  try {
-    const detail = await fetchUser(target.id)
-    const next: UserStatus = target.status === 'ENABLED' ? 'DISABLED' : 'ENABLED'
-    await updateUserStatus(target.id, next, detail.version)
-    toast.show(next === 'ENABLED' ? '用户已启用' : '用户已禁用', 'success')
-    statusTarget.value = null
-    await load()
-  } catch (caught) {
-    toast.show(caught instanceof ApiError ? caught.message : '状态更新失败', 'error')
-  } finally {
-    statusSaving.value = false
-  }
-}
-
 async function openRoles(user: UserSummary): Promise<void> {
   roleError.value = ''
   selectedRoleIds.value = []
@@ -521,28 +521,8 @@ const savePassword = handlePasswordSubmit(async (values) => {
   }
 })
 
-async function doForceLogout(device?: string): Promise<void> {
-  if (!logoutTarget.value) {
-    return
-  }
-  loggingOut.value = true
-  try {
-    if (device) {
-      await forceLogoutDevice(logoutTarget.value.id, device)
-    } else {
-      await forceLogout(logoutTarget.value.id)
-    }
-    toast.show('已强制下线', 'success')
-    logoutTarget.value = null
-  } catch (caught) {
-    toast.show(caught instanceof ApiError ? caught.message : '操作失败', 'error')
-  } finally {
-    loggingOut.value = false
-  }
-}
-
 function statusText(status: UserStatus): string {
-  return status === 'ENABLED' ? '启用' : '禁用'
+  return status === 'ENABLED' ? '正常' : '禁用'
 }
 
 onMounted(() => {
@@ -552,7 +532,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageHeader title="用户管理" description="维护后台账号、所属部门与角色；禁用的账号无法登录。">
+  <PageHeader
+    class="user-page-header"
+    title="用户管理"
+    description="维护后台账号、所属部门与角色；禁用的账号无法登录。"
+  >
     <template #actions>
       <AppButton v-permission="'iam:user:create'" @click="openCreate">
         <Plus :size="14" aria-hidden="true" />
@@ -561,20 +545,8 @@ onMounted(() => {
     </template>
   </PageHeader>
 
-  <div class="mt-5 grid min-w-0 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-    <aside class="app-panel hidden self-start p-4 lg:block">
-      <div class="mb-3 flex items-center justify-between">
-        <span class="section-label">组织部门</span
-        ><AppButton
-          variant="ghost"
-          size="icon-sm"
-          :icon="RefreshCw"
-          :loading="departmentsLoading"
-          aria-label="刷新部门树"
-          title="刷新部门树"
-          @click="refreshDepartments"
-        />
-      </div>
+  <div class="user-management mt-5 grid min-w-0 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+    <aside aria-label="组织部门" class="user-departments app-panel hidden self-start p-4 lg:block">
       <p v-if="departmentsLoading && !departments.length" class="py-4 text-xs text-ink-soft">
         正在加载部门…
       </p>
@@ -624,20 +596,6 @@ onMounted(() => {
           />
         </AppField>
 
-        <AppField label="排序" for="user-sort" class="w-[180px]">
-          <AppSelect
-            id="user-sort"
-            v-model="sort"
-            :options="[
-              { label: '创建时间 ↓', value: 'createdAt,desc' },
-              { label: '创建时间 ↑', value: 'createdAt,asc' },
-              { label: '用户名 ↑', value: 'username,asc' },
-              { label: '用户名 ↓', value: 'username,desc' },
-              { label: '最近登录 ↓', value: 'lastLoginAt,desc' },
-            ]"
-          />
-        </AppField>
-
         <template #actions>
           <AppButton type="submit" :loading="loading" :icon="Search">查询</AppButton>
           <AppButton variant="outline" :disabled="loading" :icon="RefreshCw" @click="resetFilters"
@@ -646,18 +604,27 @@ onMounted(() => {
         </template>
       </AppFilterBar>
 
-      <AppPanel :show-footer="!error && total > 0">
+      <AppPanel class="user-list-panel" :show-footer="!error && total > 0">
         <template #header>
-          <div class="flex items-center gap-2.5">
-            <span class="section-label">用户列表</span>
-            <span v-if="!error" class="text-[11.5px] text-ink-soft">共 {{ total }} 条</span>
+          <div class="flex min-w-0 items-baseline gap-3">
+            <h2 class="section-label">用户列表</h2>
+            <span v-if="!error" class="text-[12px] font-medium text-ink-soft"
+              >共 {{ total }} 条</span
+            >
           </div>
         </template>
 
         <template #tools>
-          <AppButton variant="ghost" size="sm" :loading="loading" @click="load">
-            <RefreshCw :size="14" aria-hidden="true" />
-            刷新
+          <AppButton
+            class="user-list-tool"
+            variant="outline"
+            size="icon-sm"
+            :loading="loading"
+            aria-label="刷新"
+            title="刷新"
+            @click="load"
+          >
+            <RefreshCw v-if="!loading" :size="17" aria-hidden="true" />
           </AppButton>
         </template>
 
@@ -678,8 +645,8 @@ onMounted(() => {
                 (row.nickname || row.username).slice(0, 1)
               }}</span>
               <div class="min-w-0">
-                <div class="font-semibold text-ink">{{ row.nickname || row.username }}</div>
-                <div class="text-xs text-ink-soft">@{{ row.username }}</div>
+                <div class="font-[620] text-ink">{{ row.nickname || row.username }}</div>
+                <div class="mt-px text-xs text-ink-soft">@{{ row.username }}</div>
               </div>
             </div></template
           >
@@ -691,7 +658,7 @@ onMounted(() => {
               <span
                 v-for="role in row.roles"
                 :key="role.id"
-                class="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand"
+                class="rounded-full bg-brand/10 px-[9px] py-0.5 text-[12px] font-semibold text-brand"
                 >{{ role.name }}{{ role.status === 'DISABLED' ? '（停用）' : '' }}</span
               ><span v-if="!row.roles?.length" class="text-ink-soft">未分配角色</span>
             </div></template
@@ -701,6 +668,8 @@ onMounted(() => {
           >
           <template #cell-status="{ row }">
             <AppStatusTag
+              class="user-status"
+              :class="row.status === 'ENABLED' && 'user-status-enabled'"
               :tone="row.status === 'ENABLED' ? 'success' : 'danger'"
               :label="statusText(row.status)"
             />
@@ -713,13 +682,13 @@ onMounted(() => {
           </template>
 
           <template #cell-createdAt="{ row }">
-            <span class="tnum text-[12px] text-ink-soft">
+            <span class="tnum whitespace-nowrap text-[13px] text-ink-soft">
               {{ formatDateTime(row.createdAt) }}
             </span>
           </template>
 
           <template #cell-actions="{ row }">
-            <div class="flex items-center justify-end gap-0.5">
+            <div class="user-actions flex items-center justify-end gap-0.5">
               <AppButton
                 v-permission="'iam:user:update'"
                 variant="ghost"
@@ -751,25 +720,16 @@ onMounted(() => {
                 <KeyRound :size="14" aria-hidden="true" />
               </AppButton>
               <AppButton
-                v-permission="'iam:user:status'"
-                :variant="row.status === 'ENABLED' ? 'danger-ghost' : 'ghost'"
-                size="icon-sm"
-                :aria-label="row.status === 'ENABLED' ? '禁用' : '启用'"
-                :title="row.status === 'ENABLED' ? '禁用' : '启用'"
-                @click="requestToggleStatus(row)"
-              >
-                <Ban v-if="row.status === 'ENABLED'" :size="14" aria-hidden="true" />
-                <CircleCheck v-else :size="14" aria-hidden="true" />
-              </AppButton>
-              <AppButton
-                v-permission="'iam:user:force-logout'"
+                v-permission="'iam:user:delete'"
                 variant="ghost"
                 size="icon-sm"
-                aria-label="强制下线"
-                title="强制下线"
-                @click="logoutTarget = row"
+                aria-label="删除"
+                :title="protectedUser(row) ? '当前登录账号或超级管理员账号不可删除' : '删除'"
+                :disabled="protectedUser(row) || deletePreparing !== undefined || deleting"
+                :loading="deletePreparing === row.id"
+                @click="requestDelete(row)"
               >
-                <LogOut :size="14" aria-hidden="true" />
+                <Trash2 :size="14" aria-hidden="true" />
               </AppButton>
             </div>
           </template>
@@ -777,6 +737,7 @@ onMounted(() => {
 
         <template #footer>
           <AppPagination
+            appearance="user-list"
             :page="page"
             :page-size="size"
             :total="total"
@@ -1038,38 +999,137 @@ onMounted(() => {
       </AppButton>
     </template>
   </AppDialog>
-
-  <AppDialog
-    :open="!!logoutTarget"
-    :title="`强制下线 - ${logoutTarget?.username ?? ''}`"
-    size="sm"
-    @close="logoutTarget = null"
-  >
-    <p class="text-[13px] leading-6 text-ink-muted">选择要下线的设备，操作立即生效。</p>
-    <div class="mt-4 grid grid-cols-2 gap-2">
-      <AppButton variant="danger" :disabled="loggingOut" @click="doForceLogout()">
-        全部设备
-      </AppButton>
-      <AppButton
-        v-for="device in ['WEB', 'APP', 'MINI']"
-        :key="device"
-        variant="outline"
-        :disabled="loggingOut"
-        @click="doForceLogout(device)"
-      >
-        {{ device }}
-      </AppButton>
-    </div>
+  <AppDialog :open="!!deleteTarget" title="删除用户" size="sm" @close="closeDelete">
+    <p class="text-[13px] leading-6 text-ink-muted">
+      确定永久删除用户「{{ deleteTarget?.nickname || deleteTarget?.username }}」 （@{{
+        deleteTarget?.username
+      }}）吗？删除后该账号及角色关联将被移除，全部登录会话立即失效，此操作不可恢复。
+    </p>
+    <p
+      v-if="deleteError"
+      class="mt-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-[12px] leading-5 text-destructive"
+      role="alert"
+    >
+      {{ deleteError }}
+    </p>
+    <template #footer>
+      <AppButton variant="outline" :disabled="deleting" @click="closeDelete">取消</AppButton>
+      <AppButton variant="danger" :loading="deleting" @click="confirmDelete">删除用户</AppButton>
+    </template>
   </AppDialog>
-
-  <AppConfirm
-    :open="!!statusTarget"
-    :title="statusConfirmTitle"
-    :message="statusConfirmMessage"
-    :confirm-text="statusConfirmAction"
-    :tone="statusTarget?.status === 'ENABLED' ? 'danger' : 'primary'"
-    :loading="statusSaving"
-    @close="statusTarget = null"
-    @confirm="confirmToggleStatus"
-  />
 </template>
+
+<style scoped>
+.user-page-header,
+.user-management {
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.user-page-header :deep(h1) {
+  font-weight: 740;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.user-page-header :deep(p) {
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.user-list-panel :deep(.section-label) {
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.user-list-panel :deep(.section-label::before) {
+  width: 7px;
+  height: 7px;
+  box-shadow: 0 0 0 5px var(--success-soft);
+}
+
+.user-list-tool {
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+  box-shadow: var(--inset-edge);
+}
+
+.user-list-tool:hover {
+  background: var(--hover-surface);
+  color: var(--ink);
+}
+
+.user-list-panel :deep(thead th) {
+  font-weight: 620;
+}
+
+.user-departments {
+  padding: 16px 18px 20px;
+}
+
+.user-departments :deep(nav > div) {
+  padding-top: 4px;
+}
+
+.user-list-panel :deep(header) {
+  min-height: 60px;
+  padding: 14px 20px;
+}
+
+.user-list-panel :deep(footer) {
+  padding: 12px 20px;
+}
+
+.user-list-panel :deep(tbody td) {
+  height: 48px;
+  padding-block: 6px;
+}
+
+.user-list-panel :deep(th:nth-child(5)),
+.user-list-panel :deep(td:nth-child(5)) {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.user-list-panel :deep(th:last-child),
+.user-list-panel :deep(td:last-child) {
+  border-left: 1px solid var(--line-soft);
+}
+
+.user-status {
+  gap: 6px;
+  border: 0;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.user-status-enabled {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.user-status-enabled :deep(> span) {
+  background: var(--brand-bright);
+  box-shadow: 0 0 0 3px var(--success-soft);
+}
+
+.user-actions :deep(button) {
+  color: var(--ink-soft);
+}
+
+.user-actions :deep(button:hover) {
+  color: var(--ink);
+}
+
+.user-actions :deep(svg) {
+  stroke-width: 1.5;
+}
+</style>

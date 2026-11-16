@@ -28,6 +28,10 @@ export async function fetchUser(id: number): Promise<UserDetail> {
   return response.data.data
 }
 
+export async function deleteUser(id: number, version: number): Promise<void> {
+  await http.delete(`/admin/iam/users/${id}`, { params: { version } })
+}
+
 export async function createUser(payload: CreateUserPayload): Promise<UserDetail> {
   const response = await http.post<ApiResponse<UserDetail>>('/admin/iam/users', payload)
   return response.data.data

@@ -88,14 +88,21 @@ test('部门树筛选、角色展示与移动端筛选可用', async ({ page }, 
     .getByRole('button', { name: '研发中心', exact: true })
     .click()
   await expect.poll(() => requests.at(-1)?.searchParams.get('departmentId')).toBe('2')
+  await expect(page.getByRole('button', { name: '未分配部门', exact: true })).toHaveCount(0)
   await page
     .getByRole('navigation', { name: '部门筛选' })
-    .getByRole('button', { name: '未分配部门', exact: true })
+    .getByRole('button', { name: '全部部门', exact: true })
     .click()
-  await expect.poll(() => requests.at(-1)?.searchParams.get('unassignedDepartment')).toBe('true')
+  await expect.poll(() => requests.at(-1)?.searchParams.has('departmentId')).toBe(false)
+  expect(requests.at(-1)?.searchParams.has('unassignedDepartment')).toBe(false)
   await page.screenshot({ path: testInfo.outputPath('users-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 375, height: 812 })
   await page.getByRole('button', { name: '按部门筛选', exact: true }).click()
+  await expect(
+    page
+      .getByRole('dialog', { name: '按部门筛选' })
+      .getByRole('button', { name: '未分配部门', exact: true }),
+  ).toHaveCount(0)
   await page
     .getByRole('dialog', { name: '按部门筛选' })
     .getByRole('button', { name: '研发中心', exact: true })
