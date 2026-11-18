@@ -8,6 +8,7 @@ import io.github.keel.iam.application.authorization.RoleBriefView;
 import io.github.keel.iam.application.identity.CreateUserCommand;
 import io.github.keel.iam.application.identity.ResetPasswordCommand;
 import io.github.keel.iam.application.identity.UpdateUserCommand;
+import io.github.keel.iam.application.identity.UpdateUserProfileCommand;
 import io.github.keel.iam.application.identity.UserApplicationService;
 import io.github.keel.iam.application.identity.UserDetailView;
 import io.github.keel.iam.application.identity.UserPageCommand;
@@ -18,6 +19,7 @@ import io.github.keel.iam.interfaces.admin.dto.AssignRolesRequest;
 import io.github.keel.iam.interfaces.admin.dto.CreateUserRequest;
 import io.github.keel.iam.interfaces.admin.dto.ResetPasswordRequest;
 import io.github.keel.iam.interfaces.admin.dto.RoleBrief;
+import io.github.keel.iam.interfaces.admin.dto.UpdateUserProfileRequest;
 import io.github.keel.iam.interfaces.admin.dto.UpdateUserRequest;
 import io.github.keel.iam.interfaces.admin.dto.UpdateUserStatusRequest;
 import io.github.keel.iam.interfaces.admin.dto.UserDetail;
@@ -27,11 +29,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,9 +53,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 管理端用户查询与维护接口。
- */
+/** 管理端用户查询与维护接口。 */
 @Tag(name = "User", description = "管理端用户查询与维护")
 @RestController
 @RequestMapping("/api/v1/admin/iam/users")
@@ -61,24 +64,50 @@ public class UserController {
     private final UserQueryApplicationService userQueryApplicationService;
     private final UserApplicationService userApplicationService;
 
-    @Operation(operationId = "listUsers", summary = "用户分页查询", description = "支持用户名前缀、状态筛选与白名单排序。")
+    @Operation(
+            operationId = "listUsers",
+            summary = "用户分页查询",
+            description = "支持关键字、部门及下级、未分配部门、状态筛选；保留原有用户名前缀语义与白名单排序。")
     @GetMapping
     @PreAuthorize("@perm.has('iam:user:list')")
     public Result<PageResult<UserSummary>> list(
-            @Parameter(description = "页码，从 1 开始") @RequestParam(defaultValue = "1") @Min(1) int page,
-            @Parameter(description = "每页条数，最大 100") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @Parameter(description = "页码，从 1 开始") @RequestParam(defaultValue = "1") @Min(1)
+                    int page,
+            @Parameter(description = "每页条数，最大 100")
+                    @RequestParam(defaultValue = "20")
+                    @Min(1)
+                    @Max(100)
+                    int size,
             @Parameter(description = "排序，格式 field,asc|desc；字段白名单：username、createdAt、lastLoginAt")
-            @RequestParam(required = false) @Size(max = 64) String sort,
-            @Parameter(description = "用户名前缀") @RequestParam(required = false) @Size(max = 64) String username,
-            @Parameter(description = "用户状态") @RequestParam(required = false) UserStatus status) {
-        PageResult<UserSummaryView> result = userQueryApplicationService.page(
-                new UserPageCommand(page, size, sort, username, status));
+                    @RequestParam(required = false)
+                    @Size(max = 64)
+                    String sort,
+            @Parameter(description = "用户名前缀") @RequestParam(required = false) @Size(max = 64)
+                    String username,
+            @Parameter(description = "用户状态") @RequestParam(required = false) UserStatus status,
+            @RequestParam(required = false) @Size(min = 1, max = 64) String keyword,
+            @RequestParam(required = false) @Min(1) Long departmentId,
+            @RequestParam(required = false) Boolean includeDescendants,
+            @RequestParam(defaultValue = "false") boolean unassignedDepartment) {
+        PageResult<UserSummaryView> result =
+                userQueryApplicationService.page(
+                        new UserPageCommand(
+                                page,
+                                size,
+                                sort,
+                                username,
+                                status,
+                                keyword,
+                                departmentId,
+                                includeDescendants,
+                                unassignedDepartment));
 
-        return Result.success(new PageResult<>(
-                result.items().stream().map(this::toSummary).toList(),
-                result.total(),
-                result.page(),
-                result.size()));
+        return Result.success(
+                new PageResult<>(
+                        result.items().stream().map(this::toSummary).toList(),
+                        result.total(),
+                        result.page(),
+                        result.size()));
     }
 
     @Operation(operationId = "getUser", summary = "用户详情", description = "包含用户资料与已分配角色。")
@@ -88,56 +117,112 @@ public class UserController {
         return Result.success(toDetail(userApplicationService.detail(id)));
     }
 
-    @Operation(operationId = "createUser", summary = "创建用户", description = "用户名唯一；只允许分配启用角色；初始密码要求首次登录修改。")
+    @DeleteMapping("/{id}")
+    @Operation(
+            operationId = "deleteUser",
+            summary = "永久删除用户",
+            description = "version为必填非负数；禁止删除当前账号及拥有SUPER_ADMIN角色的账号。删除用户及角色关联，吊销全部会话、清理权限缓存，保留历史审计日志。")
+    @ApiResponse(responseCode = "204", description = "用户已删除，无响应体")
+    @PreAuthorize("@perm.has('iam:user:delete')")
+    @OperationLog(module = "iam", action = "DELETE")
+    public ResponseEntity<Void> delete(
+            @PathVariable @Min(1) long id, @RequestParam @Min(0) int version) {
+        userApplicationService.delete(id, version);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+            operationId = "createUser",
+            summary = "创建用户",
+            description = "用户名唯一；只允许分配启用角色；初始密码要求首次登录修改。")
     @ApiResponse(responseCode = "201", description = "创建成功")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@perm.has('iam:user:create')")
     @OperationLog(module = "iam", action = "CREATE")
     public Result<UserDetail> create(@Valid @RequestBody CreateUserRequest request) {
-        UserDetailView view = userApplicationService.create(new CreateUserCommand(
-                request.username(),
-                request.password(),
-                request.nickname(),
-                request.email(),
-                request.phone(),
-                request.roleIds()));
+        UserDetailView view =
+                userApplicationService.create(
+                        new CreateUserCommand(
+                                request.username(),
+                                request.password(),
+                                request.nickname(),
+                                request.email(),
+                                request.phone(),
+                                request.roleIds(),
+                                request.departmentId(),
+                                request.status()));
         return Result.success(toDetail(view));
     }
 
-    @Operation(operationId = "updateUser", summary = "更新用户资料", description = "username 不可修改；email / phone 传 null 表示清空。")
+    @Operation(
+            operationId = "updateUser",
+            summary = "更新用户资料",
+            description = "username 不可修改；email / phone 传 null 表示清空。")
     @PutMapping("/{id}")
     @PreAuthorize("@perm.has('iam:user:update')")
     @OperationLog(module = "iam", action = "UPDATE")
-    public Result<UserDetail> update(@PathVariable long id, @Valid @RequestBody UpdateUserRequest request) {
-        UserDetailView view = userApplicationService.update(id, new UpdateUserCommand(
-                request.nickname(),
-                request.email(),
-                request.phone(),
-                request.version()));
+    public Result<UserDetail> update(
+            @PathVariable long id, @Valid @RequestBody UpdateUserRequest request) {
+        UserDetailView view =
+                userApplicationService.update(
+                        id,
+                        new UpdateUserCommand(
+                                request.nickname(),
+                                request.email(),
+                                request.phone(),
+                                request.version()));
         return Result.success(toDetail(view));
     }
 
-    @Operation(operationId = "updateUserStatus", summary = "启用/禁用用户", description = "禁用时立即吊销该用户全部 token 并清理权限缓存。")
+    @Operation(
+            operationId = "updateUserProfile",
+            summary = "保存完整用户资料与部门",
+            description = "profile为用户的单例资料子资源；部门必填，资料和归属原子保存，email/phone显式null表示清空。")
+    @PutMapping("/{id}/profile")
+    @PreAuthorize("@perm.has('iam:user:update')")
+    @OperationLog(module = "iam", action = "UPDATE")
+    public Result<UserDetail> updateProfile(
+            @PathVariable @Min(1) long id, @Valid @RequestBody UpdateUserProfileRequest request) {
+        return Result.success(
+                toDetail(
+                        userApplicationService.updateProfile(
+                                id,
+                                new UpdateUserProfileCommand(
+                                        request.nickname(),
+                                        request.email(),
+                                        request.phone(),
+                                        request.departmentId(),
+                                        request.version()))));
+    }
+
+    @Operation(
+            operationId = "updateUserStatus",
+            summary = "启用/禁用用户",
+            description = "禁用时立即吊销该用户全部 token 并清理权限缓存。")
     @PatchMapping("/{id}/status")
     @PreAuthorize("@perm.has('iam:user:status')")
     @OperationLog(module = "iam", action = "STATUS_CHANGE")
-    public Result<UserDetail> updateStatus(@PathVariable long id,
-                                           @Valid @RequestBody UpdateUserStatusRequest request) {
-        return Result.success(toDetail(userApplicationService.updateStatus(
-                id, request.status(), request.version())));
+    public Result<UserDetail> updateStatus(
+            @PathVariable long id, @Valid @RequestBody UpdateUserStatusRequest request) {
+        return Result.success(
+                toDetail(
+                        userApplicationService.updateStatus(
+                                id, request.status(), request.version())));
     }
 
-    @Operation(operationId = "resetUserPassword", summary = "重置用户密码", description = "设置首次登录改密并吊销全部 token。")
+    @Operation(
+            operationId = "resetUserPassword",
+            summary = "重置用户密码",
+            description = "设置首次登录改密并吊销全部 token。")
     @ApiResponse(responseCode = "204", description = "密码已重置")
     @PostMapping("/{id}/reset-password")
     @PreAuthorize("@perm.has('iam:user:reset-password')")
     @OperationLog(module = "iam", action = "UPDATE")
-    public ResponseEntity<Void> resetPassword(@PathVariable long id,
-                                              @Valid @RequestBody ResetPasswordRequest request) {
-        userApplicationService.resetPassword(id, new ResetPasswordCommand(
-                request.newPassword(),
-                request.version()));
+    public ResponseEntity<Void> resetPassword(
+            @PathVariable long id, @Valid @RequestBody ResetPasswordRequest request) {
+        userApplicationService.resetPassword(
+                id, new ResetPasswordCommand(request.newPassword(), request.version()));
         return ResponseEntity.noContent().build();
     }
 
@@ -145,18 +230,23 @@ public class UserController {
     @GetMapping("/{id}/roles")
     @PreAuthorize("@perm.has('iam:user:list')")
     public Result<UserRolesResponse> roles(@PathVariable long id) {
-        return Result.success(new UserRolesResponse(userApplicationService.rolesOf(id).stream()
-                .map(this::toRoleBrief)
-                .toList()));
+        return Result.success(
+                new UserRolesResponse(
+                        userApplicationService.rolesOf(id).stream()
+                                .map(this::toRoleBrief)
+                                .toList()));
     }
 
-    @Operation(operationId = "replaceUserRoles", summary = "全量替换用户角色", description = "只允许启用角色；不使用 version，最后一次写入生效。")
+    @Operation(
+            operationId = "replaceUserRoles",
+            summary = "全量替换用户角色",
+            description = "只允许启用角色；不使用 version，最后一次写入生效。")
     @ApiResponse(responseCode = "204", description = "分配成功")
     @PutMapping("/{id}/roles")
     @PreAuthorize("@perm.has('iam:user:assign-role')")
     @OperationLog(module = "iam", action = "ASSIGN")
-    public ResponseEntity<Void> replaceRoles(@PathVariable long id,
-                                             @Valid @RequestBody AssignRolesRequest request) {
+    public ResponseEntity<Void> replaceRoles(
+            @PathVariable long id, @Valid @RequestBody AssignRolesRequest request) {
         userApplicationService.replaceRoles(id, request.roleIds());
         return ResponseEntity.noContent().build();
     }
@@ -171,12 +261,16 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(operationId = "forceLogoutDevice", summary = "强制下线（指定设备）", description = "无会话时同样返回 204。")
+    @Operation(
+            operationId = "forceLogoutDevice",
+            summary = "强制下线（指定设备）",
+            description = "无会话时同样返回 204。")
     @ApiResponse(responseCode = "204", description = "已下线")
     @DeleteMapping("/{id}/sessions/{device}")
     @PreAuthorize("@perm.has('iam:user:force-logout')")
     @OperationLog(module = "iam", action = "DELETE")
-    public ResponseEntity<Void> forceLogoutDevice(@PathVariable long id, @PathVariable Device device) {
+    public ResponseEntity<Void> forceLogoutDevice(
+            @PathVariable long id, @PathVariable Device device) {
         userApplicationService.forceLogoutDevice(id, device.loginType(), device.name());
         return ResponseEntity.noContent().build();
     }
@@ -188,7 +282,11 @@ public class UserController {
                 view.nickname(),
                 UserStatus.valueOf(view.status()),
                 view.lastLoginAt(),
-                view.createdAt());
+                view.createdAt(),
+                view.phone(),
+                view.departmentId(),
+                view.departmentName(),
+                view.roles().stream().map(this::toRoleBrief).toList());
     }
 
     private UserDetail toDetail(UserDetailView view) {
@@ -205,7 +303,10 @@ public class UserController {
                 view.roles().stream().map(this::toRoleBrief).toList(),
                 view.createdAt(),
                 view.updatedAt(),
-                view.version());
+                view.version(),
+                view.departmentId(),
+                view.departmentName(),
+                view.departmentStatus());
     }
 
     private RoleBrief toRoleBrief(RoleBriefView view) {

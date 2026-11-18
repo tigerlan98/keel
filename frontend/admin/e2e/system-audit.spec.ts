@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { mockSession, ok } from './support/api-mocks'
+import { chooseOption } from './support/controls'
 
 const phase3Permissions = [
   'sys:config:list',
@@ -123,7 +124,7 @@ test.describe('Phase 3 系统参数与审计日志', () => {
       await expect(table.getByText('私有', { exact: true })).toBeVisible()
       await expect(page.getByText('共 2 条')).toBeVisible()
 
-      await page.getByLabel('分组').selectOption('SYSTEM')
+      await chooseOption(page, '分组', 'SYSTEM')
       await page.getByLabel('参数 Key').fill('system.')
       await page.getByRole('button', { name: '查询' }).click()
 
@@ -207,9 +208,9 @@ test.describe('Phase 3 系统参数与审计日志', () => {
       await expect(page.getByText('共 2 条')).toBeVisible()
 
       await page.getByLabel('操作人').fill('admin')
-      await page.getByLabel('模块').selectOption('system')
-      await page.getByLabel('动作').selectOption('UPDATE')
-      await page.getByLabel('结果').selectOption('false')
+      await chooseOption(page, '模块', 'system')
+      await chooseOption(page, '动作', 'UPDATE')
+      await chooseOption(page, '结果', '失败')
       await page.getByRole('button', { name: '查询' }).click()
 
       await expect.poll(() => requests.length).toBeGreaterThan(1)
@@ -252,8 +253,8 @@ test.describe('Phase 3 系统参数与审计日志', () => {
       await expect(table.getByText('失败', { exact: true })).toBeVisible()
       await expect(page.getByText('共 2 条')).toBeVisible()
 
-      await page.getByLabel('动作').selectOption('LOGIN_FAILED')
-      await page.getByLabel('结果').selectOption('false')
+      await chooseOption(page, '动作', 'LOGIN_FAILED')
+      await chooseOption(page, '结果', '失败')
       await page.getByLabel('IP').fill('10.0')
       await page.getByRole('button', { name: '查询' }).click()
 

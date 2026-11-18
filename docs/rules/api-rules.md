@@ -56,7 +56,7 @@
 - 禁止文件扩展名与尾斜杠。
 - 资源路径按模块分段：`iam`、`system`、`audit`。
 - 动作使用子资源：`/status`、`/roles`、`/reset-password`。
-- 用户不提供 `DELETE`，使用 `PATCH .../status` 禁用。
+- 用户永久删除使用 `DELETE /iam/users/{id}?version={version}`，保护当前账号与拥有 `SUPER_ADMIN` 角色的账号，保留审计日志；原 `PATCH .../status` 接口保持兼容。
 - 破坏性变更使用 `/api/v2`；v1 只允许加法式演进。
 
 ### 6.2 响应结构

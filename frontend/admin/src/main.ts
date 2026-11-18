@@ -9,6 +9,9 @@ import { useAuthStore } from './stores/auth'
 import { useToastStore } from './stores/toast'
 
 import './assets/index.css'
+import { initializeAppearance } from './lib/appearance'
+
+initializeAppearance()
 
 const app = createApp(App)
 const pinia = createPinia()

@@ -11,6 +11,9 @@
     "bearerAuth" : [ ]
   } ],
   "tags" : [ {
+    "name" : "Department",
+    "description" : "部门与组织归属管理"
+  }, {
     "name" : "SystemConfig",
     "description" : "管理端系统参数"
   }, {
@@ -320,6 +323,74 @@
         }
       }
     },
+    "/api/v1/admin/iam/users/{id}/profile" : {
+      "put" : {
+        "tags" : [ "User" ],
+        "summary" : "保存完整用户资料与部门",
+        "description" : "profile为用户的单例资料子资源；部门必填，资料和归属原子保存，email/phone显式null表示清空。",
+        "operationId" : "updateUserProfile",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateUserProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultUserDetail"
+                },
+                "examples" : {
+                  "savedProfile" : {
+                    "value" : {
+                      "code" : "OK",
+                      "message" : "success",
+                      "data" : {
+                        "id" : 2,
+                        "username" : "operator",
+                        "nickname" : "运营",
+                        "email" : "ops@example.com",
+                        "phone" : null,
+                        "status" : "ENABLED",
+                        "mustChangePassword" : false,
+                        "lastLoginAt" : "2026-11-12T10:00:00.000",
+                        "lastLoginIp" : "127.0.0.1",
+                        "roles" : [ {
+                          "id" : 3,
+                          "code" : "OPS",
+                          "name" : "运维",
+                          "status" : "ENABLED"
+                        } ],
+                        "createdAt" : "2026-11-01T09:00:00.000",
+                        "updatedAt" : "2026-11-12T10:00:00.000",
+                        "version" : 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/iam/roles/{id}" : {
       "get" : {
         "tags" : [ "Role" ],
@@ -566,11 +637,148 @@
         }
       }
     },
+    "/api/v1/admin/iam/departments/{id}" : {
+      "get" : {
+        "tags" : [ "Department" ],
+        "summary" : "部门详情",
+        "operationId" : "getDepartment",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultDepartmentDetail"
+                },
+                "examples" : {
+                  "departmentDetail" : {
+                    "value" : {
+                      "code" : "OK",
+                      "message" : "success",
+                      "data" : {
+                        "id" : 13,
+                        "parentId" : 12,
+                        "code" : "RD",
+                        "name" : "研发中心",
+                        "sort" : 0,
+                        "status" : "ENABLED",
+                        "version" : 0,
+                        "directUserCount" : 0,
+                        "createdAt" : "2026-11-15T10:00:00.000",
+                        "updatedAt" : "2026-11-15T10:00:00.000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Department" ],
+        "summary" : "更新部门资料",
+        "description" : "编码不可修改；根不可移动，不能形成环。",
+        "operationId" : "updateDepartment",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateDepartmentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultDepartmentDetail"
+                },
+                "examples" : {
+                  "departmentDetail" : {
+                    "value" : {
+                      "code" : "OK",
+                      "message" : "success",
+                      "data" : {
+                        "id" : 13,
+                        "parentId" : 12,
+                        "code" : "RD",
+                        "name" : "研发中心",
+                        "sort" : 0,
+                        "status" : "ENABLED",
+                        "version" : 0,
+                        "directUserCount" : 0,
+                        "createdAt" : "2026-11-15T10:00:00.000",
+                        "updatedAt" : "2026-11-15T10:00:00.000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Department" ],
+        "summary" : "删除空叶部门",
+        "description" : "存在子部门或关联用户时拒绝删除；version为必填非负数。",
+        "operationId" : "deleteDepartment",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "部门已删除"
+          }
+        }
+      }
+    },
     "/api/v1/admin/iam/users" : {
       "get" : {
         "tags" : [ "User" ],
         "summary" : "用户分页查询",
-        "description" : "支持用户名前缀、状态筛选与白名单排序。",
+        "description" : "支持关键字、部门及下级、未分配部门、状态筛选；保留原有用户名前缀语义与白名单排序。",
         "operationId" : "listUsers",
         "parameters" : [ {
           "name" : "page",
@@ -624,6 +832,39 @@
             "type" : "string",
             "enum" : [ "ENABLED", "DISABLED" ]
           }
+        }, {
+          "name" : "keyword",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "maxLength" : 64,
+            "minLength" : 1
+          }
+        }, {
+          "name" : "departmentId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          }
+        }, {
+          "name" : "includeDescendants",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "name" : "unassignedDepartment",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
         } ],
         "responses" : {
           "200" : {
@@ -643,6 +884,10 @@
                           "id" : 2,
                           "username" : "operator",
                           "nickname" : "运营",
+                          "phone" : "13800000002",
+                          "departmentId" : 12,
+                          "departmentName" : "总公司",
+                          "roles" : [ ],
                           "status" : "ENABLED",
                           "lastLoginAt" : "2026-11-12T10:00:00.000",
                           "createdAt" : "2026-11-01T09:00:00.000"
@@ -681,6 +926,34 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ResultUserDetail"
+                },
+                "examples" : {
+                  "createdUser" : {
+                    "value" : {
+                      "code" : "OK",
+                      "message" : "success",
+                      "data" : {
+                        "id" : 2,
+                        "username" : "operator",
+                        "nickname" : "运营",
+                        "email" : "ops@example.com",
+                        "phone" : null,
+                        "status" : "ENABLED",
+                        "mustChangePassword" : false,
+                        "lastLoginAt" : "2026-11-12T10:00:00.000",
+                        "lastLoginIp" : "127.0.0.1",
+                        "roles" : [ {
+                          "id" : 3,
+                          "code" : "OPS",
+                          "name" : "运维",
+                          "status" : "ENABLED"
+                        } ],
+                        "createdAt" : "2026-11-01T09:00:00.000",
+                        "updatedAt" : "2026-11-12T10:00:00.000",
+                        "version" : 0
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -836,6 +1109,55 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ResultRoleDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/iam/departments" : {
+      "post" : {
+        "tags" : [ "Department" ],
+        "summary" : "新增部门",
+        "operationId" : "createDepartment",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateDepartmentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "部门已创建",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultDepartmentDetail"
+                },
+                "examples" : {
+                  "createdDepartment" : {
+                    "value" : {
+                      "code" : "OK",
+                      "message" : "success",
+                      "data" : {
+                        "id" : 13,
+                        "parentId" : 12,
+                        "code" : "RD",
+                        "name" : "研发中心",
+                        "sort" : 0,
+                        "status" : "ENABLED",
+                        "version" : 0,
+                        "directUserCount" : 0,
+                        "createdAt" : "2026-11-15T10:00:00.000",
+                        "updatedAt" : "2026-11-15T10:00:00.000"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1027,6 +1349,66 @@
         }
       }
     },
+    "/api/v1/admin/iam/departments/{id}/status" : {
+      "patch" : {
+        "tags" : [ "Department" ],
+        "summary" : "启停部门",
+        "description" : "根不可停用；存在启用后代时拒绝停用，不自动禁用用户。",
+        "operationId" : "updateDepartmentStatus",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateDepartmentStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultDepartmentDetail"
+                },
+                "examples" : {
+                  "departmentStatus" : {
+                    "value" : {
+                      "code" : "OK",
+                      "message" : "success",
+                      "data" : {
+                        "id" : 13,
+                        "parentId" : 12,
+                        "code" : "RD",
+                        "name" : "研发中心",
+                        "sort" : 0,
+                        "status" : "ENABLED",
+                        "version" : 0,
+                        "directUserCount" : 0,
+                        "createdAt" : "2026-11-15T10:00:00.000",
+                        "updatedAt" : "2026-11-15T10:00:00.000"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/system/configs" : {
       "get" : {
         "tags" : [ "SystemConfig" ],
@@ -1188,6 +1570,81 @@
                           "status" : "ENABLED",
                           "children" : [ ]
                         } ]
+                      } ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/iam/departments/tree" : {
+      "get" : {
+        "tags" : [ "Department" ],
+        "summary" : "部门树",
+        "description" : "最多1000个节点的有界集合，包含停用部门，不分页。",
+        "operationId" : "getDepartmentTree",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultListDepartmentNode"
+                },
+                "examples" : {
+                  "departmentTree" : {
+                    "value" : {
+                      "code" : "OK",
+                      "message" : "success",
+                      "data" : [ {
+                        "id" : 12,
+                        "parentId" : 0,
+                        "code" : "ROOT",
+                        "name" : "总公司",
+                        "sort" : 0,
+                        "status" : "ENABLED",
+                        "version" : 0,
+                        "directUserCount" : 0,
+                        "children" : [ ]
+                      } ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/iam/departments/options" : {
+      "get" : {
+        "tags" : [ "Department" ],
+        "summary" : "部门筛选与选择选项",
+        "description" : "有界树，只提供归属选择需要的最小字段；停用项仍可用于用户筛选。",
+        "operationId" : "getDepartmentOptions",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultListDepartmentOption"
+                },
+                "examples" : {
+                  "departmentOptions" : {
+                    "value" : {
+                      "code" : "OK",
+                      "message" : "success",
+                      "data" : [ {
+                        "id" : 12,
+                        "parentId" : 0,
+                        "name" : "总公司",
+                        "status" : "ENABLED",
+                        "selectable" : true,
+                        "children" : [ ]
                       } ]
                     }
                   }
@@ -1906,6 +2363,17 @@
           "version" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "departmentId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "departmentName" : {
+            "type" : "string"
+          },
+          "departmentStatus" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "DISABLED" ]
           }
         },
         "required" : [ "createdAt", "id", "mustChangePassword", "roles", "status", "updatedAt", "username", "version" ]
@@ -1924,6 +2392,37 @@
           }
         },
         "required" : [ "roleIds" ]
+      },
+      "UpdateUserProfileRequest" : {
+        "type" : "object",
+        "properties" : {
+          "nickname" : {
+            "type" : "string",
+            "maxLength" : 64,
+            "minLength" : 0
+          },
+          "email" : {
+            "type" : [ "string", "null" ],
+            "format" : "email",
+            "maxLength" : 128,
+            "minLength" : 0
+          },
+          "phone" : {
+            "type" : [ "string", "null" ],
+            "pattern" : "^[0-9+-]{6,32}$"
+          },
+          "departmentId" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "departmentId", "email", "nickname", "phone", "version" ]
       },
       "UpdateRoleRequest" : {
         "type" : "object",
@@ -2129,6 +2628,91 @@
           }
         }
       },
+      "UpdateDepartmentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "parentId" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 64,
+            "minLength" : 0
+          },
+          "sort" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 9999,
+            "minimum" : 0
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "name", "parentId", "sort", "version" ]
+      },
+      "DepartmentDetail" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "parentId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "sort" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "DISABLED" ]
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "directUserCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "code", "createdAt", "directUserCount", "id", "name", "parentId", "sort", "status", "updatedAt", "version" ]
+      },
+      "ResultDepartmentDetail" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/DepartmentDetail"
+          }
+        }
+      },
       "CreateUserRequest" : {
         "type" : "object",
         "properties" : {
@@ -2167,6 +2751,15 @@
             },
             "maxItems" : 100,
             "minItems" : 0
+          },
+          "departmentId" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "DISABLED" ]
           }
         },
         "required" : [ "nickname", "password", "username" ]
@@ -2219,6 +2812,37 @@
           }
         },
         "required" : [ "code", "name" ]
+      },
+      "CreateDepartmentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "parentId" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 1
+          },
+          "code" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[A-Z][A-Z0-9_-]{1,63}"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 64,
+            "minLength" : 0
+          },
+          "sort" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 9999,
+            "minimum" : 0
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "DISABLED" ]
+          }
+        },
+        "required" : [ "code", "name", "parentId", "sort", "status" ]
       },
       "LoginRequest" : {
         "type" : "object",
@@ -2392,6 +3016,21 @@
         },
         "required" : [ "status", "version" ]
       },
+      "UpdateDepartmentStatusRequest" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "DISABLED" ]
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "status", "version" ]
+      },
       "ConfigSummary" : {
         "type" : "object",
         "properties" : {
@@ -2523,9 +3162,25 @@
           "createdAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "departmentId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "departmentName" : {
+            "type" : "string"
+          },
+          "roles" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RoleBrief"
+            }
           }
         },
-        "required" : [ "createdAt", "id", "status", "username" ]
+        "required" : [ "createdAt", "id", "roles", "status", "username" ]
       },
       "ResultUserRolesResponse" : {
         "type" : "object",
@@ -2711,6 +3366,112 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/ResourceNode"
+            }
+          }
+        }
+      },
+      "DepartmentNode" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "parentId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "sort" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "DISABLED" ]
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "directUserCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "children" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DepartmentNode"
+            }
+          }
+        },
+        "required" : [ "children", "code", "directUserCount", "id", "name", "parentId", "sort", "status", "version" ]
+      },
+      "ResultListDepartmentNode" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DepartmentNode"
+            }
+          }
+        }
+      },
+      "DepartmentOption" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "parentId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "DISABLED" ]
+          },
+          "selectable" : {
+            "type" : "boolean"
+          },
+          "children" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DepartmentOption"
+            }
+          }
+        },
+        "required" : [ "children", "id", "name", "parentId", "selectable", "status" ]
+      },
+      "ResultListDepartmentOption" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DepartmentOption"
             }
           }
         }

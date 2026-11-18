@@ -13,6 +13,7 @@ export type UserQueryParams = NonNullable<operations['listUsers']['parameters'][
 
 export type CreateUserPayload = components['schemas']['CreateUserRequest']
 export type UpdateUserPayload = components['schemas']['UpdateUserRequest']
+export type UpdateUserProfilePayload = components['schemas']['UpdateUserProfileRequest']
 export type ResetPasswordPayload = components['schemas']['ResetPasswordRequest']
 
 export async function fetchUsers(params: UserQueryParams): Promise<PageResult<UserSummary>> {
@@ -25,6 +26,10 @@ export async function fetchUsers(params: UserQueryParams): Promise<PageResult<Us
 export async function fetchUser(id: number): Promise<UserDetail> {
   const response = await http.get<ApiResponse<UserDetail>>(`/admin/iam/users/${id}`)
   return response.data.data
+}
+
+export async function deleteUser(id: number, version: number): Promise<void> {
+  await http.delete(`/admin/iam/users/${id}`, { params: { version } })
 }
 
 export async function createUser(payload: CreateUserPayload): Promise<UserDetail> {
@@ -54,7 +59,9 @@ export async function resetUserPassword(id: number, payload: ResetPasswordPayloa
 }
 
 export async function fetchUserRoles(id: number): Promise<RoleBrief[]> {
-  const response = await http.get<ApiResponse<{ roles: RoleBrief[] }>>(`/admin/iam/users/${id}/roles`)
+  const response = await http.get<ApiResponse<{ roles: RoleBrief[] }>>(
+    `/admin/iam/users/${id}/roles`,
+  )
   return response.data.data.roles
 }
 
@@ -68,4 +75,12 @@ export async function forceLogout(id: number): Promise<void> {
 
 export async function forceLogoutDevice(id: number, device: string): Promise<void> {
   await http.delete(`/admin/iam/users/${id}/sessions/${device}`)
+}
+
+export async function updateUserProfile(
+  id: number,
+  payload: UpdateUserProfilePayload,
+): Promise<UserDetail> {
+  return (await http.put<ApiResponse<UserDetail>>(`/admin/iam/users/${id}/profile`, payload)).data
+    .data
 }

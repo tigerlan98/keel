@@ -31,13 +31,14 @@ const userMenu = {
 }
 
 test.describe('RBAC 与菜单', () => {
-  test('登录后落在第一个有权限菜单，侧边栏由后端菜单驱动', async ({ page }) => {
+  test('登录后落在工作台，业务侧边栏由后端菜单驱动', async ({ page }) => {
     await mockSessionWithMenus(page, [userMenu], ['iam:user:list'])
     await mockUsers(page)
 
     await page.goto('/')
 
-    await expect(page).toHaveURL('/iam/users')
+    await expect(page).toHaveURL('/')
+    await expect(page.getByRole('heading', { name: /超级管理员/ })).toBeVisible()
     await expect(page.getByRole('link', { name: '用户管理' })).toBeVisible()
     await expect(page.getByRole('link', { name: '角色管理' })).toHaveCount(0)
   })
@@ -60,21 +61,27 @@ test.describe('RBAC 与菜单', () => {
 
     await expect(page.getByText('无权限执行该操作').first()).toBeVisible()
     await expect(page).toHaveURL('/iam/users')
-    await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '用户菜单：超级管理员' })).toBeVisible()
   })
 
   test('角色页面可新增角色并提交编码', async ({ page }) => {
-    await mockSessionWithMenus(page, [
-      userMenu,
-      {
-        ...userMenu,
-        id: 20,
-        code: 'iam:role:list',
-        name: '角色管理',
-        path: '/iam/roles',
-        children: [],
-      },
-    ], ['iam:user:list', 'iam:role:list'])
+    await mockUsers(page)
+    await page.route('**/api/v1/admin/iam/resources/tree*', (route) => route.fulfill(ok([])))
+    await mockSessionWithMenus(
+      page,
+      [
+        userMenu,
+        {
+          ...userMenu,
+          id: 20,
+          code: 'iam:role:list',
+          name: '角色管理',
+          path: '/iam/roles',
+          children: [],
+        },
+      ],
+      ['iam:user:list', 'iam:role:list'],
+    )
 
     let createdBody: unknown
     await page.route('**/api/v1/admin/iam/roles*', async (route) => {
@@ -104,22 +111,26 @@ test.describe('RBAC 与菜单', () => {
     await page.getByLabel('名称').fill('运维管理员')
     await page.getByRole('button', { name: '保存' }).click()
 
-    await expect(page.getByText('角色已创建')).toBeVisible()
+    await expect(page.getByText('角色已新增')).toBeVisible()
     expect(createdBody).toMatchObject({ code: 'OPS_ADMIN', name: '运维管理员' })
   })
 
   test('资源停用冲突展示后端错误', async ({ page }) => {
-    await mockSessionWithMenus(page, [
-      userMenu,
-      {
-        ...userMenu,
-        id: 21,
-        code: 'iam:resource:list',
-        name: '资源管理',
-        path: '/iam/resources',
-        children: [],
-      },
-    ], ['iam:user:list', 'iam:resource:list'])
+    await mockSessionWithMenus(
+      page,
+      [
+        userMenu,
+        {
+          ...userMenu,
+          id: 21,
+          code: 'iam:resource:list',
+          name: '资源管理',
+          path: '/iam/resources',
+          children: [],
+        },
+      ],
+      ['iam:user:list', 'iam:resource:list'],
+    )
 
     await page.route('**/api/v1/admin/iam/resources/tree', (route) =>
       route.fulfill(
@@ -220,6 +231,13 @@ async function mockSessionWithMenus(
   menus: unknown[],
   permissions: string[] = ['iam:user:list'],
 ): Promise<void> {
+  await page.route('**/api/v1/admin/iam/departments/options', (route) =>
+    route.fulfill(
+      ok([
+        { id: 1, parentId: 0, name: '总公司', status: 'ENABLED', selectable: true, children: [] },
+      ]),
+    ),
+  )
   await page.route('**/api/v1/admin/auth/me', (route) =>
     route.fulfill(ok({ ...session, menus, permissions })),
   )

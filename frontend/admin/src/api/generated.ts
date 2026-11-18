@@ -70,6 +70,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/iam/users/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * 保存完整用户资料与部门
+         * @description profile为用户的单例资料子资源；部门必填，资料和归属原子保存，email/phone显式null表示清空。
+         */
+        put: operations["updateUserProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/iam/roles/{id}": {
         parameters: {
             query?: never;
@@ -137,6 +157,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/iam/departments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 部门详情 */
+        get: operations["getDepartment"];
+        /**
+         * 更新部门资料
+         * @description 编码不可修改；根不可移动，不能形成环。
+         */
+        put: operations["updateDepartment"];
+        post?: never;
+        /**
+         * 删除空叶部门
+         * @description 存在子部门或关联用户时拒绝删除；version为必填非负数。
+         */
+        delete: operations["deleteDepartment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/iam/users": {
         parameters: {
             query?: never;
@@ -146,7 +191,7 @@ export interface paths {
         };
         /**
          * 用户分页查询
-         * @description 支持用户名前缀、状态筛选与白名单排序。
+         * @description 支持关键字、部门及下级、未分配部门、状态筛选；保留原有用户名前缀语义与白名单排序。
          */
         get: operations["listUsers"];
         put?: never;
@@ -199,6 +244,23 @@ export interface paths {
          * @description 角色编码创建后不可修改。
          */
         post: operations["createRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/iam/departments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 新增部门 */
+        post: operations["createDepartment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -305,6 +367,26 @@ export interface paths {
         patch: operations["updateResourceStatus"];
         trace?: never;
     };
+    "/api/v1/admin/iam/departments/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 启停部门
+         * @description 根不可停用；存在启用后代时拒绝停用，不自动禁用用户。
+         */
+        patch: operations["updateDepartmentStatus"];
+        trace?: never;
+    };
     "/api/v1/admin/system/configs": {
         parameters: {
             query?: never;
@@ -337,6 +419,46 @@ export interface paths {
          * @description 资源树是有界集合，不分页；可按状态与类型筛选。
          */
         get: operations["getResourceTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/iam/departments/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 部门树
+         * @description 最多1000个节点的有界集合，包含停用部门，不分页。
+         */
+        get: operations["getDepartmentTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/iam/departments/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 部门筛选与选择选项
+         * @description 有界树，只提供归属选择需要的最小字段；停用项仍可用于用户筛选。
+         */
+        get: operations["getDepartmentOptions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -572,9 +694,24 @@ export interface components {
             updatedAt: string;
             /** Format: int32 */
             version: number;
+            /** Format: int64 */
+            departmentId?: number;
+            departmentName?: string;
+            /** @enum {string} */
+            departmentStatus?: "ENABLED" | "DISABLED";
         };
         AssignRolesRequest: {
             roleIds: number[];
+        };
+        UpdateUserProfileRequest: {
+            nickname: string;
+            /** Format: email */
+            email: string | null;
+            phone: string | null;
+            /** Format: int64 */
+            departmentId: number;
+            /** Format: int32 */
+            version: number;
         };
         UpdateRoleRequest: {
             name: string;
@@ -651,6 +788,40 @@ export interface components {
             message?: string;
             data?: components["schemas"]["ResourceDetail"];
         };
+        UpdateDepartmentRequest: {
+            /** Format: int64 */
+            parentId: number;
+            name: string;
+            /** Format: int32 */
+            sort: number;
+            /** Format: int32 */
+            version: number;
+        };
+        DepartmentDetail: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            parentId: number;
+            code: string;
+            name: string;
+            /** Format: int32 */
+            sort: number;
+            /** @enum {string} */
+            status: "ENABLED" | "DISABLED";
+            /** Format: int32 */
+            version: number;
+            /** Format: int64 */
+            directUserCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ResultDepartmentDetail: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["DepartmentDetail"];
+        };
         CreateUserRequest: {
             username: string;
             password: string;
@@ -659,6 +830,10 @@ export interface components {
             email?: string;
             phone?: string;
             roleIds?: number[];
+            /** Format: int64 */
+            departmentId?: number;
+            /** @enum {string} */
+            status?: "ENABLED" | "DISABLED";
         };
         ResetPasswordRequest: {
             newPassword: string;
@@ -673,6 +848,16 @@ export interface components {
             status?: "ENABLED" | "DISABLED";
             /** Format: int32 */
             sort?: number;
+        };
+        CreateDepartmentRequest: {
+            /** Format: int64 */
+            parentId: number;
+            code: string;
+            name: string;
+            /** Format: int32 */
+            sort: number;
+            /** @enum {string} */
+            status: "ENABLED" | "DISABLED";
         };
         LoginRequest: {
             username: string;
@@ -731,6 +916,12 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        UpdateDepartmentStatusRequest: {
+            /** @enum {string} */
+            status: "ENABLED" | "DISABLED";
+            /** Format: int32 */
+            version: number;
+        };
         ConfigSummary: {
             /** Format: int64 */
             id: number;
@@ -783,6 +974,11 @@ export interface components {
             lastLoginAt?: string;
             /** Format: date-time */
             createdAt: string;
+            phone?: string;
+            /** Format: int64 */
+            departmentId?: number;
+            departmentName?: string;
+            roles: components["schemas"]["RoleBrief"][];
         };
         ResultUserRolesResponse: {
             code?: string;
@@ -850,6 +1046,44 @@ export interface components {
             code?: string;
             message?: string;
             data?: components["schemas"]["ResourceNode"][];
+        };
+        DepartmentNode: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            parentId: number;
+            code: string;
+            name: string;
+            /** Format: int32 */
+            sort: number;
+            /** @enum {string} */
+            status: "ENABLED" | "DISABLED";
+            /** Format: int32 */
+            version: number;
+            /** Format: int64 */
+            directUserCount: number;
+            children: components["schemas"]["DepartmentNode"][];
+        };
+        ResultListDepartmentNode: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["DepartmentNode"][];
+        };
+        DepartmentOption: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            parentId: number;
+            name: string;
+            /** @enum {string} */
+            status: "ENABLED" | "DISABLED";
+            selectable: boolean;
+            children: components["schemas"]["DepartmentOption"][];
+        };
+        ResultListDepartmentOption: {
+            code?: string;
+            message?: string;
+            data?: components["schemas"]["DepartmentOption"][];
         };
         MeResponse: {
             user: components["schemas"]["UserBrief"];
@@ -1144,6 +1378,32 @@ export interface operations {
             };
         };
     };
+    updateUserProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultUserDetail"];
+                };
+            };
+        };
+    };
     getRole: {
         parameters: {
             query?: never;
@@ -1306,6 +1566,76 @@ export interface operations {
             };
         };
     };
+    getDepartment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultDepartmentDetail"];
+                };
+            };
+        };
+    };
+    updateDepartment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDepartmentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultDepartmentDetail"];
+                };
+            };
+        };
+    };
+    deleteDepartment: {
+        parameters: {
+            query: {
+                version: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 部门已删除 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listUsers: {
         parameters: {
             query?: {
@@ -1319,6 +1649,10 @@ export interface operations {
                 username?: string;
                 /** @description 用户状态 */
                 status?: "ENABLED" | "DISABLED";
+                keyword?: string;
+                departmentId?: number;
+                includeDescendants?: boolean;
+                unassignedDepartment?: boolean;
             };
             header?: never;
             path?: never;
@@ -1436,6 +1770,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultRoleDetail"];
+                };
+            };
+        };
+    };
+    createDepartment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDepartmentRequest"];
+            };
+        };
+        responses: {
+            /** @description 部门已创建 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultDepartmentDetail"];
                 };
             };
         };
@@ -1574,6 +1932,32 @@ export interface operations {
             };
         };
     };
+    updateDepartmentStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDepartmentStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultDepartmentDetail"];
+                };
+            };
+        };
+    };
     listConfigs: {
         parameters: {
             query?: {
@@ -1626,6 +2010,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultListResourceNode"];
+                };
+            };
+        };
+    };
+    getDepartmentTree: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultListDepartmentNode"];
+                };
+            };
+        };
+    };
+    getDepartmentOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultListDepartmentOption"];
                 };
             };
         };

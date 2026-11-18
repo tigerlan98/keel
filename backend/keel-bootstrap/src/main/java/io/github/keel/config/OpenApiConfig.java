@@ -2,6 +2,7 @@ package io.github.keel.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.github.keel.common.security.config.SecurityTokenProperties;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,7 +29,7 @@ import java.util.List;
 /**
  * OpenAPI 分组、安全方案与响应示例。
  *
- * <p>示例通过分组自定义器挂到 SpringDoc 推断出的成功响应上，避免在 Controller 中重复声明 schema。</p>
+ * <p>示例通过分组自定义器挂到 SpringDoc 推断出的成功响应上，避免在 Controller 中重复声明 schema。
  */
 @Configuration(proxyBeanMethods = false)
 public class OpenApiConfig {
@@ -36,85 +38,113 @@ public class OpenApiConfig {
 
     private static final String ERROR_SCHEMA_REF = "#/components/schemas/ErrorResponse";
 
-    private static final String LOGIN_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"user":{"id":1,"username":"admin","nickname":"超级管理员"},"superAdmin":true,"permissions":[],"menus":[],"mustChangePassword":false}}
-            """;
+    private static final String LOGIN_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"user":{"id":1,"username":"admin","nickname":"超级管理员"},"superAdmin":true,"permissions":[],"menus":[],"mustChangePassword":false}}
+""";
 
-    private static final String SESSION_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"user":{"id":1,"username":"admin","nickname":"超级管理员"},"superAdmin":true,"permissions":[],"menus":[],"mustChangePassword":false}}
-            """;
+    private static final String SESSION_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"user":{"id":1,"username":"admin","nickname":"超级管理员"},"superAdmin":true,"permissions":[],"menus":[],"mustChangePassword":false}}
+""";
 
-    private static final String CSRF_EXAMPLE = """
+    private static final String CSRF_EXAMPLE =
+            """
             {"code":"OK","message":"success","data":{"token":"csrf-token"}}
             """;
 
-    private static final String USER_PAGE_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"items":[{"id":2,"username":"operator","nickname":"运营","status":"ENABLED","lastLoginAt":"2026-11-12T10:00:00.000","createdAt":"2026-11-01T09:00:00.000"}],"total":1,"page":1,"size":20}}
-            """;
+    private static final String USER_PAGE_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"items":[{"id":2,"username":"operator","nickname":"运营","phone":"13800000002","departmentId":12,"departmentName":"总公司","roles":[],"status":"ENABLED","lastLoginAt":"2026-11-12T10:00:00.000","createdAt":"2026-11-01T09:00:00.000"}],"total":1,"page":1,"size":20}}
+""";
 
-    private static final String USER_DETAIL_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"id":2,"username":"operator","nickname":"运营","email":"ops@example.com","phone":null,"status":"ENABLED","mustChangePassword":false,"lastLoginAt":"2026-11-12T10:00:00.000","lastLoginIp":"127.0.0.1","roles":[{"id":3,"code":"OPS","name":"运维","status":"ENABLED"}],"createdAt":"2026-11-01T09:00:00.000","updatedAt":"2026-11-12T10:00:00.000","version":0}}
-            """;
+    private static final String USER_DETAIL_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"id":2,"username":"operator","nickname":"运营","email":"ops@example.com","phone":null,"status":"ENABLED","mustChangePassword":false,"lastLoginAt":"2026-11-12T10:00:00.000","lastLoginIp":"127.0.0.1","roles":[{"id":3,"code":"OPS","name":"运维","status":"ENABLED"}],"createdAt":"2026-11-01T09:00:00.000","updatedAt":"2026-11-12T10:00:00.000","version":0}}
+""";
 
-    private static final String ROLE_PAGE_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"items":[{"id":3,"code":"OPS","name":"运维","description":"运维角色","status":"ENABLED","sort":10,"createdAt":"2026-11-01T09:00:00.000"}],"total":1,"page":1,"size":20}}
-            """;
+    private static final String DEPARTMENT_DETAIL_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"id":13,"parentId":12,"code":"RD","name":"研发中心","sort":0,"status":"ENABLED","version":0,"directUserCount":0,"createdAt":"2026-11-15T10:00:00.000","updatedAt":"2026-11-15T10:00:00.000"}}
+""";
+    private static final String DEPARTMENT_TREE_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":[{"id":12,"parentId":0,"code":"ROOT","name":"总公司","sort":0,"status":"ENABLED","version":0,"directUserCount":0,"children":[]}]}
+""";
+    private static final String DEPARTMENT_OPTIONS_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":[{"id":12,"parentId":0,"name":"总公司","status":"ENABLED","selectable":true,"children":[]}]}
+""";
 
-    private static final String ROLE_DETAIL_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"id":3,"code":"OPS","name":"运维","description":"运维角色","status":"ENABLED","sort":10,"createdAt":"2026-11-01T09:00:00.000","updatedAt":"2026-11-12T10:00:00.000","version":0}}
-            """;
+    private static final String ROLE_PAGE_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"items":[{"id":3,"code":"OPS","name":"运维","description":"运维角色","status":"ENABLED","sort":10,"createdAt":"2026-11-01T09:00:00.000"}],"total":1,"page":1,"size":20}}
+""";
 
-    private static final String RESOURCE_TREE_EXAMPLE = """
-            {"code":"OK","message":"success","data":[{"id":1,"parentId":0,"type":"DIRECTORY","code":"iam:directory","name":"身份与权限","path":"/iam","component":null,"icon":"shield","sort":20,"visible":true,"status":"ENABLED","children":[{"id":2,"parentId":1,"type":"MENU","code":"iam:user:list","name":"用户管理","path":"/iam/users","component":"iam/users/index","icon":"users","sort":201,"visible":true,"status":"ENABLED","children":[]}]}]}
-            """;
+    private static final String ROLE_DETAIL_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"id":3,"code":"OPS","name":"运维","description":"运维角色","status":"ENABLED","sort":10,"createdAt":"2026-11-01T09:00:00.000","updatedAt":"2026-11-12T10:00:00.000","version":0}}
+""";
 
-    private static final String CONFIG_PAGE_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"items":[{"id":1,"configKey":"system.name","configValue":"Keel","configGroup":"SYSTEM","publicFlag":true,"description":"系统名称","updatedAt":"2026-11-12T10:00:00.000","version":0}],"total":1,"page":1,"size":20}}
-            """;
+    private static final String RESOURCE_TREE_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":[{"id":1,"parentId":0,"type":"DIRECTORY","code":"iam:directory","name":"身份与权限","path":"/iam","component":null,"icon":"shield","sort":20,"visible":true,"status":"ENABLED","children":[{"id":2,"parentId":1,"type":"MENU","code":"iam:user:list","name":"用户管理","path":"/iam/users","component":"iam/users/index","icon":"users","sort":201,"visible":true,"status":"ENABLED","children":[]}]}]}
+""";
 
-    private static final String CONFIG_DETAIL_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"id":1,"configKey":"system.name","configValue":"Keel","configGroup":"SYSTEM","publicFlag":true,"description":"系统名称","createdAt":"2026-11-01T09:00:00.000","createdBy":0,"updatedAt":"2026-11-12T10:00:00.000","updatedBy":1,"version":0}}
-            """;
+    private static final String CONFIG_PAGE_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"items":[{"id":1,"configKey":"system.name","configValue":"Keel","configGroup":"SYSTEM","publicFlag":true,"description":"系统名称","updatedAt":"2026-11-12T10:00:00.000","version":0}],"total":1,"page":1,"size":20}}
+""";
 
-    private static final String OPERATION_LOG_PAGE_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"items":[{"id":1,"traceId":"8f3a","userId":1,"username":"admin","module":"system","action":"UPDATE","requestMethod":"PUT","requestUri":"/api/v1/admin/system/configs/1","success":true,"ip":"127.0.0.1","durationMs":12,"createdAt":"2026-11-12T10:00:00.000"}],"total":1,"page":1,"size":20}}
-            """;
+    private static final String CONFIG_DETAIL_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"id":1,"configKey":"system.name","configValue":"Keel","configGroup":"SYSTEM","publicFlag":true,"description":"系统名称","createdAt":"2026-11-01T09:00:00.000","createdBy":0,"updatedAt":"2026-11-12T10:00:00.000","updatedBy":1,"version":0}}
+""";
 
-    private static final String OPERATION_LOG_DETAIL_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"id":1,"traceId":"8f3a","userId":1,"username":"admin","module":"system","action":"UPDATE","method":"ConfigController#update","requestMethod":"PUT","requestUri":"/api/v1/admin/system/configs/1","requestParams":"[1,{\\"configValue\\":\\"Keel\\",\\"publicFlag\\":true,\\"version\\":0}]","success":true,"ip":"127.0.0.1","userAgent":"Mozilla/5.0","durationMs":12,"createdAt":"2026-11-12T10:00:00.000"}}
-            """;
+    private static final String OPERATION_LOG_PAGE_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"items":[{"id":1,"traceId":"8f3a","userId":1,"username":"admin","module":"system","action":"UPDATE","requestMethod":"PUT","requestUri":"/api/v1/admin/system/configs/1","success":true,"ip":"127.0.0.1","durationMs":12,"createdAt":"2026-11-12T10:00:00.000"}],"total":1,"page":1,"size":20}}
+""";
 
-    private static final String LOGIN_LOG_PAGE_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"items":[{"id":1,"traceId":"8f3a","userId":1,"username":"admin","action":"LOGIN","loginType":"ADMIN","device":"WEB","ip":"127.0.0.1","success":true,"createdAt":"2026-11-12T10:00:00.000"}],"total":1,"page":1,"size":20}}
-            """;
+    private static final String OPERATION_LOG_DETAIL_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"id":1,"traceId":"8f3a","userId":1,"username":"admin","module":"system","action":"UPDATE","method":"ConfigController#update","requestMethod":"PUT","requestUri":"/api/v1/admin/system/configs/1","requestParams":"[1,{\\"configValue\\":\\"Keel\\",\\"publicFlag\\":true,\\"version\\":0}]","success":true,"ip":"127.0.0.1","userAgent":"Mozilla/5.0","durationMs":12,"createdAt":"2026-11-12T10:00:00.000"}}
+""";
 
-    private static final String LOGIN_LOG_DETAIL_EXAMPLE = """
-            {"code":"OK","message":"success","data":{"id":1,"traceId":"8f3a","userId":1,"username":"admin","action":"LOGIN","loginType":"ADMIN","device":"WEB","ip":"127.0.0.1","userAgent":"Mozilla/5.0","success":true,"createdAt":"2026-11-12T10:00:00.000"}}
-            """;
+    private static final String LOGIN_LOG_PAGE_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"items":[{"id":1,"traceId":"8f3a","userId":1,"username":"admin","action":"LOGIN","loginType":"ADMIN","device":"WEB","ip":"127.0.0.1","success":true,"createdAt":"2026-11-12T10:00:00.000"}],"total":1,"page":1,"size":20}}
+""";
 
-    private static final String PUBLIC_SITE_CONFIG_EXAMPLE = """
+    private static final String LOGIN_LOG_DETAIL_EXAMPLE =
+            """
+{"code":"OK","message":"success","data":{"id":1,"traceId":"8f3a","userId":1,"username":"admin","action":"LOGIN","loginType":"ADMIN","device":"WEB","ip":"127.0.0.1","userAgent":"Mozilla/5.0","success":true,"createdAt":"2026-11-12T10:00:00.000"}}
+""";
+
+    private static final String PUBLIC_SITE_CONFIG_EXAMPLE =
+            """
             {"code":"OK","message":"success","data":{"systemName":"Keel","logoUrl":""}}
             """;
 
-    /**
-     * Cookie 与 Bearer 二选一；公开端点通过 {@code @SecurityRequirements} 覆盖为无认证。
-     */
+    /** Cookie 与 Bearer 二选一；公开端点通过 {@code @SecurityRequirements} 覆盖为无认证。 */
     @Bean
     public OpenAPI keelOpenApi(SecurityTokenProperties securityTokenProperties) {
         return new OpenAPI()
-                .info(new Info()
-                        .title("Keel API")
-                        .version("v1")
-                        .description("Keel 管理端与门户公开接口"))
-                .components(new Components()
-                        .addSecuritySchemes("cookieAuth", new SecurityScheme()
-                                .type(SecurityScheme.Type.APIKEY)
-                                .in(SecurityScheme.In.COOKIE)
-                                .name(securityTokenProperties.cookieName()))
-                        .addSecuritySchemes("bearerAuth", new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("opaque")))
+                .info(new Info().title("Keel API").version("v1").description("Keel 管理端与门户公开接口"))
+                .components(
+                        new Components()
+                                .addSecuritySchemes(
+                                        "cookieAuth",
+                                        new SecurityScheme()
+                                                .type(SecurityScheme.Type.APIKEY)
+                                                .in(SecurityScheme.In.COOKIE)
+                                                .name(securityTokenProperties.cookieName()))
+                                .addSecuritySchemes(
+                                        "bearerAuth",
+                                        new SecurityScheme()
+                                                .type(SecurityScheme.Type.HTTP)
+                                                .scheme("bearer")
+                                                .bearerFormat("opaque")))
                 .addSecurityItem(new SecurityRequirement().addList("cookieAuth"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
@@ -143,30 +173,37 @@ public class OpenApiConfig {
         addExamples(openApi);
     }
 
-    /**
-     * 分组文档会裁剪未引用的 schema，因此在自定义器中注册错误 schema。
-     */
+    /** 分组文档会裁剪未引用的 schema，因此在自定义器中注册错误 schema。 */
     private static void registerErrorSchemas(OpenAPI openApi) {
         if (openApi.getComponents() == null) {
             openApi.setComponents(new Components());
         }
         openApi.getComponents()
-                .addSchemas("FieldError", new ObjectSchema()
-                        .addProperty("field", new StringSchema())
-                        .addProperty("message", new StringSchema())
-                        .required(List.of("field", "message")))
-                .addSchemas("ErrorResponse", new ObjectSchema()
-                        .addProperty("code", new StringSchema())
-                        .addProperty("message", new StringSchema())
-                        .addProperty("data", new ObjectSchema()
-                                .addProperty("fieldErrors", new ArraySchema()
-                                        .items(new Schema<>().$ref("#/components/schemas/FieldError"))))
-                        .required(List.of("code", "message")));
+                .addSchemas(
+                        "FieldError",
+                        new ObjectSchema()
+                                .addProperty("field", new StringSchema())
+                                .addProperty("message", new StringSchema())
+                                .required(List.of("field", "message")))
+                .addSchemas(
+                        "ErrorResponse",
+                        new ObjectSchema()
+                                .addProperty("code", new StringSchema())
+                                .addProperty("message", new StringSchema())
+                                .addProperty(
+                                        "data",
+                                        new ObjectSchema()
+                                                .addProperty(
+                                                        "fieldErrors",
+                                                        new ArraySchema()
+                                                                .items(
+                                                                        new Schema<>()
+                                                                                .$ref(
+                                                                                        "#/components/schemas/FieldError"))))
+                                .required(List.of("code", "message")));
     }
 
-    /**
-     * 非 2xx 响应统一引用 {@code ErrorResponse}，避免 SpringDoc 复用成功响应的泛型。
-     */
+    /** 非 2xx 响应统一引用 {@code ErrorResponse}，避免 SpringDoc 复用成功响应的泛型。 */
     private static void applyErrorSchema(OpenAPI openApi) {
         if (openApi.getPaths() == null) {
             return;
@@ -176,11 +213,15 @@ public class OpenApiConfig {
                 if (operation.getResponses() == null) {
                     continue;
                 }
-                operation.getResponses().forEach((status, response) -> {
-                    if (!status.startsWith("2")) {
-                        mediaTypeOf(response).setSchema(new Schema<>().$ref(ERROR_SCHEMA_REF));
-                    }
-                });
+                operation
+                        .getResponses()
+                        .forEach(
+                                (status, response) -> {
+                                    if (!status.startsWith("2")) {
+                                        mediaTypeOf(response)
+                                                .setSchema(new Schema<>().$ref(ERROR_SCHEMA_REF));
+                                    }
+                                });
             }
         }
     }
@@ -190,31 +231,103 @@ public class OpenApiConfig {
         addExample(openApi, "/api/v1/admin/auth/me", "200", "currentSession", SESSION_EXAMPLE);
         addExample(openApi, "/api/v1/admin/auth/csrf", "200", "csrfToken", CSRF_EXAMPLE);
         addExample(openApi, "/api/v1/admin/iam/users", "200", "userPage", USER_PAGE_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/iam/users/{id}", "200", "userDetail", USER_DETAIL_EXAMPLE);
+        addExample(
+                openApi, "/api/v1/admin/iam/users/{id}", "200", "userDetail", USER_DETAIL_EXAMPLE);
+        addExample(openApi, "/api/v1/admin/iam/users", "201", "createdUser", USER_DETAIL_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/iam/users/{id}/profile",
+                "200",
+                "savedProfile",
+                USER_DETAIL_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/iam/departments/tree",
+                "200",
+                "departmentTree",
+                DEPARTMENT_TREE_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/iam/departments/options",
+                "200",
+                "departmentOptions",
+                DEPARTMENT_OPTIONS_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/iam/departments/{id}",
+                "200",
+                "departmentDetail",
+                DEPARTMENT_DETAIL_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/iam/departments",
+                "201",
+                "createdDepartment",
+                DEPARTMENT_DETAIL_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/iam/departments/{id}/status",
+                "200",
+                "departmentStatus",
+                DEPARTMENT_DETAIL_EXAMPLE);
         addExample(openApi, "/api/v1/admin/iam/roles", "200", "rolePage", ROLE_PAGE_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/iam/roles/{id}", "200", "roleDetail", ROLE_DETAIL_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/iam/resources/tree", "200", "resourceTree", RESOURCE_TREE_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/system/configs", "200", "configPage", CONFIG_PAGE_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/system/configs/{id}", "200", "configDetail", CONFIG_DETAIL_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/audit/operation-logs", "200", "operationLogPage",
+        addExample(
+                openApi, "/api/v1/admin/iam/roles/{id}", "200", "roleDetail", ROLE_DETAIL_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/iam/resources/tree",
+                "200",
+                "resourceTree",
+                RESOURCE_TREE_EXAMPLE);
+        addExample(
+                openApi, "/api/v1/admin/system/configs", "200", "configPage", CONFIG_PAGE_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/system/configs/{id}",
+                "200",
+                "configDetail",
+                CONFIG_DETAIL_EXAMPLE);
+        addExample(
+                openApi,
+                "/api/v1/admin/audit/operation-logs",
+                "200",
+                "operationLogPage",
                 OPERATION_LOG_PAGE_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/audit/operation-logs/{id}", "200", "operationLogDetail",
+        addExample(
+                openApi,
+                "/api/v1/admin/audit/operation-logs/{id}",
+                "200",
+                "operationLogDetail",
                 OPERATION_LOG_DETAIL_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/audit/login-logs", "200", "loginLogPage",
+        addExample(
+                openApi,
+                "/api/v1/admin/audit/login-logs",
+                "200",
+                "loginLogPage",
                 LOGIN_LOG_PAGE_EXAMPLE);
-        addExample(openApi, "/api/v1/admin/audit/login-logs/{id}", "200", "loginLogDetail",
+        addExample(
+                openApi,
+                "/api/v1/admin/audit/login-logs/{id}",
+                "200",
+                "loginLogDetail",
                 LOGIN_LOG_DETAIL_EXAMPLE);
-        addExample(openApi, "/api/v1/public/system/config", "200", "publicSiteConfig",
+        addExample(
+                openApi,
+                "/api/v1/public/system/config",
+                "200",
+                "publicSiteConfig",
                 PUBLIC_SITE_CONFIG_EXAMPLE);
     }
 
-    private static void addExample(OpenAPI openApi, String path, String status, String name, String json) {
+    private static void addExample(
+            OpenAPI openApi, String path, String status, String name, String json) {
         PathItem pathItem = openApi.getPaths() == null ? null : openApi.getPaths().get(path);
         if (pathItem == null) {
             return;
         }
         for (Operation operation : pathItem.readOperations()) {
-            ApiResponse response = operation.getResponses() == null ? null : operation.getResponses().get(status);
+            ApiResponse response =
+                    operation.getResponses() == null ? null : operation.getResponses().get(status);
             if (response != null) {
                 mediaTypeOf(response).addExamples(name, new Example().value(readJson(json)));
             }

@@ -14,6 +14,19 @@ import java.util.List;
 @Mapper
 public interface IamUserMapper extends BaseMapper<IamUserPO> {
 
+    @Select("SELECT * FROM iam_user WHERE id = #{id} FOR UPDATE")
+    IamUserPO lockById(@Param("id") long id);
+
+    @Select("SELECT * FROM iam_user WHERE username = #{username} FOR SHARE")
+    IamUserPO shareByUsername(@Param("username") String username);
+
+    @Select("""
+            SELECT COUNT(*) FROM iam_user_role ur
+            JOIN iam_role r ON r.id = ur.role_id
+            WHERE ur.user_id = #{userId} AND r.code = 'SUPER_ADMIN'
+            """)
+    int countProtectedRole(@Param("userId") long userId);
+
     @Select("""
             SELECT COUNT(*)
             FROM iam_user_role ur

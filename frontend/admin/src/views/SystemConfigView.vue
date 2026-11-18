@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { Pencil, RefreshCw, Search } from '@lucide/vue'
+import AppButton from '@/components/app/AppButton.vue'
+import AppDataTable from '@/components/app/AppDataTable.vue'
+import AppErrorState from '@/components/app/AppErrorState.vue'
+import AppField from '@/components/app/AppField.vue'
+import AppFilterBar from '@/components/app/AppFilterBar.vue'
+import AppInput from '@/components/app/AppInput.vue'
+import AppPagination from '@/components/app/AppPagination.vue'
+import AppPanel from '@/components/app/AppPanel.vue'
+import AppSelect from '@/components/app/AppSelect.vue'
+import AppStatusTag from '@/components/app/AppStatusTag.vue'
+
+import { onMounted, reactive, ref } from 'vue'
 
 import { fetchConfig, fetchConfigs, updateConfig } from '@/api/configs'
 import { ApiError } from '@/api/http'
@@ -21,7 +33,15 @@ const items = ref<ConfigSummary[]>([])
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size.value)))
+const columns = [
+  { key: 'configKey', label: '参数 Key' },
+  { key: 'configValue', label: '参数值' },
+  { key: 'configGroup', label: '分组' },
+  { key: 'publicFlag', label: '公开' },
+  { key: 'description', label: '说明' },
+  { key: 'updatedAt', label: '更新时间' },
+  { key: 'actions', label: '操作', align: 'right' as const, sticky: true, width: '80px' },
+]
 
 const editOpen = ref(false)
 const editing = ref<ConfigDetail | null>(null)
@@ -69,23 +89,14 @@ function resetFilters() {
   void load()
 }
 
-function changeSize() {
+function changeSize(value: number) {
+  size.value = value
   page.value = 1
   void load()
 }
-
-function previousPage() {
-  if (page.value > 1) {
-    page.value -= 1
-    void load()
-  }
-}
-
-function nextPage() {
-  if (page.value < totalPages.value) {
-    page.value += 1
-    void load()
-  }
+function changePage(value: number) {
+  page.value = value
+  void load()
 }
 
 async function openEdit(config: ConfigSummary) {
@@ -144,176 +155,115 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageHeader title="系统参数" description="查看并维护系统参数值；参数新增与删除仅由数据库迁移维护。" />
+  <PageHeader
+    title="系统参数"
+    description="查看并维护系统参数值；参数新增与删除仅由数据库迁移维护。"
+  />
 
-  <div class="mt-6 rounded-xl border bg-card">
-    <form class="flex flex-wrap items-end gap-3 border-b p-4" @submit.prevent="search">
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="config-group">分组</label>
-        <select
+  <div class="mt-5 space-y-4">
+    <AppFilterBar @submit="search"
+      ><AppField label="分组" for="config-group" class="w-[150px]"
+        ><AppSelect
           id="config-group"
           v-model="filters.group"
-          class="flex h-9 w-36 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
-          <option value="">全部</option>
-          <option value="SYSTEM">SYSTEM</option>
-          <option value="AUTH">AUTH</option>
-          <option value="AUDIT">AUDIT</option>
-        </select>
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="config-keyword">参数 Key</label>
-        <input
+          :options="[
+            { label: '全部', value: '' },
+            { label: 'SYSTEM', value: 'SYSTEM' },
+            { label: 'AUTH', value: 'AUTH' },
+            { label: 'AUDIT', value: 'AUDIT' },
+          ]" /></AppField
+      ><AppField label="参数 Key" for="config-keyword" class="w-[220px]"
+        ><AppInput
           id="config-keyword"
           v-model="filters.keyword"
-          type="text"
           maxlength="128"
-          placeholder="key 前缀"
-          class="flex h-9 w-56 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        />
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="config-sort">排序</label>
-        <select
+          type="text"
+          placeholder="key 前缀" /></AppField
+      ><AppField label="排序" for="config-sort" class="w-[180px]"
+        ><AppSelect
           id="config-sort"
           v-model="sort"
-          class="flex h-9 w-36 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
-          <option value="updatedAt,desc">更新时间 ↓</option>
-          <option value="updatedAt,asc">更新时间 ↑</option>
-          <option value="configKey,asc">Key ↑</option>
-          <option value="configKey,desc">Key ↓</option>
-        </select>
-      </div>
-
-      <button
-        type="submit"
-        class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-        :disabled="loading"
+          :options="[
+            { label: '更新时间 ↓', value: 'updatedAt,desc' },
+            { label: '更新时间 ↑', value: 'updatedAt,asc' },
+            { label: 'Key ↑', value: 'configKey,asc' },
+            { label: 'Key ↓', value: 'configKey,desc' },
+          ]"
+      /></AppField>
+      <template #actions
+        ><AppButton type="submit" :loading="loading" :icon="Search">查询</AppButton
+        ><AppButton variant="outline" :disabled="loading" :icon="RefreshCw" @click="resetFilters"
+          >重置</AppButton
+        ></template
       >
-        查询
-      </button>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center justify-center rounded-md border border-input px-4 text-sm font-medium transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-        :disabled="loading"
-        @click="resetFilters"
+    </AppFilterBar>
+    <AppPanel>
+      <template #header
+        ><div class="flex items-center gap-2.5">
+          <span class="section-label">参数列表</span
+          ><span class="text-[11.5px] text-ink-soft">共 {{ total }} 条</span>
+        </div></template
       >
-        重置
-      </button>
-    </form>
-
-    <div
-      v-if="error"
-      class="flex items-center justify-between gap-3 border-b bg-destructive/5 px-4 py-3 text-sm text-destructive"
-    >
-      <span>{{ error }}</span>
-      <button type="button" class="shrink-0 underline-offset-4 hover:underline" @click="load">
-        重试
-      </button>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[1000px] text-sm">
-        <thead class="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-          <tr>
-            <th class="px-4 py-3 font-medium">参数 Key</th>
-            <th class="px-4 py-3 font-medium">参数值</th>
-            <th class="px-4 py-3 font-medium">分组</th>
-            <th class="px-4 py-3 font-medium">公开</th>
-            <th class="px-4 py-3 font-medium">说明</th>
-            <th class="px-4 py-3 font-medium">更新时间</th>
-            <th class="px-4 py-3 text-right font-medium">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="7" class="px-4 py-10 text-center text-muted-foreground">加载中...</td>
-          </tr>
-          <tr v-else-if="items.length === 0">
-            <td colspan="7" class="px-4 py-10 text-center text-muted-foreground">暂无数据</td>
-          </tr>
-          <template v-else>
-            <tr v-for="config in items" :key="config.id" class="border-b last:border-0">
-              <td class="px-4 py-3 font-mono text-xs">{{ config.configKey }}</td>
-              <td class="max-w-72 px-4 py-3">
-                <span class="block truncate font-mono text-xs" :title="config.configValue">
-                  {{ config.configValue || '(空)' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-muted-foreground">{{ config.configGroup }}</td>
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                  :class="
-                    config.publicFlag
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-muted text-muted-foreground'
-                  "
-                >
-                  {{ config.publicFlag ? '公开' : '私有' }}
-                </span>
-              </td>
-              <td class="max-w-56 px-4 py-3 text-muted-foreground">
-                <span class="block truncate" :title="config.description ?? ''">
-                  {{ config.description || '-' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-muted-foreground">
-                {{ formatDateTime(config.updatedAt) }}
-              </td>
-              <td class="px-4 py-3 text-right">
-                <button
-                  v-permission="'sys:config:update'"
-                  type="button"
-                  class="text-primary hover:underline"
-                  @click="openEdit(config)"
-                >
-                  编辑
-                </button>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm">
-      <span class="text-muted-foreground">共 {{ total }} 条</span>
-      <div class="flex items-center gap-2">
-        <label class="flex items-center gap-1 text-muted-foreground">
-          每页
-          <select
-            v-model.number="size"
-            class="h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring"
-            @change="changeSize"
-          >
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-            <option :value="50">50</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          class="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm disabled:pointer-events-none disabled:opacity-40"
-          :disabled="page <= 1 || loading"
-          @click="previousPage"
+      <template #tools
+        ><AppButton
+          variant="outline"
+          size="icon-sm"
+          aria-label="刷新"
+          title="刷新"
+          :loading="loading"
+          @click="load"
+          ><RefreshCw :size="14" /></AppButton
+      ></template>
+      <AppErrorState v-if="error" :message="error" @retry="load" />
+      <AppDataTable v-else :columns="columns" :rows="items" :loading="loading" :min-width="1100">
+        <template #cell-configKey="{ row }"
+          ><span class="code-chip">{{ row.configKey }}</span></template
         >
-          上一页
-        </button>
-        <span class="min-w-16 text-center text-muted-foreground">{{ page }} / {{ totalPages }}</span>
-        <button
-          type="button"
-          class="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm disabled:pointer-events-none disabled:opacity-40"
-          :disabled="page >= totalPages || loading"
-          @click="nextPage"
+        <template #cell-configValue="{ row }"
+          ><span class="block max-w-64 truncate text-ink" :title="row.configValue">{{
+            row.configValue || '(空)'
+          }}</span></template
         >
-          下一页
-        </button>
-      </div>
-    </div>
+        <template #cell-configGroup="{ row }"
+          ><span class="text-ink-muted">{{ row.configGroup }}</span></template
+        >
+        <template #cell-publicFlag="{ row }"
+          ><AppStatusTag
+            :dot="false"
+            :tone="row.publicFlag ? 'info' : 'neutral'"
+            :label="row.publicFlag ? '公开' : '私有'"
+        /></template>
+        <template #cell-description="{ row }"
+          ><span class="block max-w-64 truncate text-ink-muted" :title="row.description ?? ''">{{
+            row.description || '—'
+          }}</span></template
+        >
+        <template #cell-updatedAt="{ row }"
+          ><span class="tnum text-[12px] text-ink-soft">{{
+            formatDateTime(row.updatedAt)
+          }}</span></template
+        >
+        <template #cell-actions="{ row }"
+          ><AppButton
+            v-permission="'sys:config:update'"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="编辑"
+            title="编辑"
+            @click="openEdit(row)"
+            ><Pencil :size="14" /></AppButton
+        ></template>
+      </AppDataTable>
+      <template v-if="!error && total > 0" #footer
+        ><AppPagination
+          :page="page"
+          :page-size="size"
+          :total="total"
+          :loading="loading"
+          @update:page="changePage"
+          @update:page-size="changeSize"
+      /></template>
+    </AppPanel>
   </div>
 
   <AppDialog :open="editOpen" title="编辑系统参数" @close="editOpen = false">
@@ -363,21 +313,10 @@ onMounted(() => {
       </p>
     </form>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="editOpen = false"
-      >
-        取消
-      </button>
-      <button
-        type="submit"
-        form="config-form"
-        :disabled="saving"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
+      <AppButton type="button" variant="outline" @click="editOpen = false"> 取消 </AppButton>
+      <AppButton type="submit" form="config-form" :disabled="saving" variant="primary">
         {{ saving ? '保存中...' : '保存' }}
-      </button>
+      </AppButton>
     </template>
   </AppDialog>
 </template>

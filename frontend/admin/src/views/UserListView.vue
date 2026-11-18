@@ -1,5 +1,20 @@
 <script setup lang="ts">
+import {
+  Eye,
+  EyeOff,
+  KeyRound,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Shield,
+  TriangleAlert,
+  Trash2,
+} from '@lucide/vue'
+import { toTypedSchema } from '@vee-validate/zod'
+import { useForm } from 'vee-validate'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { z } from 'zod'
 
 import { ApiError } from '@/api/http'
 import { fetchRoles } from '@/api/roles'
@@ -7,48 +22,247 @@ import type { RoleSummary, UserDetail, UserStatus, UserSummary } from '@/api/typ
 import {
   assignUserRoles,
   createUser,
+  deleteUser,
   fetchUser,
   fetchUsers,
-  forceLogout,
-  forceLogoutDevice,
   resetUserPassword,
-  updateUser,
-  updateUserStatus,
+  updateUserProfile,
 } from '@/api/users'
+import AppButton from '@/components/app/AppButton.vue'
+import AppDataTable from '@/components/app/AppDataTable.vue'
 import AppDialog from '@/components/app/AppDialog.vue'
+import AppErrorState from '@/components/app/AppErrorState.vue'
+import AppField from '@/components/app/AppField.vue'
+import AppFilterBar from '@/components/app/AppFilterBar.vue'
+import AppInput from '@/components/app/AppInput.vue'
+import AppPagination from '@/components/app/AppPagination.vue'
+import AppPanel from '@/components/app/AppPanel.vue'
+import AppSelect from '@/components/app/AppSelect.vue'
+import AppStatusTag from '@/components/app/AppStatusTag.vue'
 import PageHeader from '@/components/app/PageHeader.vue'
+import RolePicker from '@/components/app/RolePicker.vue'
+import RoleSelect from '@/components/app/RoleSelect.vue'
+import DepartmentTree from '@/components/app/DepartmentTree.vue'
+import DepartmentFilter from '@/components/app/DepartmentFilter.vue'
+import DepartmentSelect from '@/components/app/DepartmentSelect.vue'
+import { useDepartments } from '@/composables/useDepartments'
+import { flattenDepartments } from '@/lib/departments'
+import { useAuthStore } from '@/stores/auth'
+import { formatDateTime } from '@/lib/format'
 import { useToastStore } from '@/stores/toast'
 
 const toast = useToastStore()
+const auth = useAuthStore()
+const { departments, departmentsLoading, departmentsError, loadDepartments } = useDepartments()
+const selectedDepartment = ref<number>()
+const initialStatus = ref<UserStatus>('ENABLED')
+const passwordVisible = ref(false)
+const roleOptionsError = ref('')
+const canReadRoles = computed(() => auth.hasPermission('iam:role:list'))
+const canAssignRoles = computed(() => auth.hasPermission('iam:user:assign-role'))
+const formRoleOptions = computed(() => [
+  ...roleOptions.value,
+  ...(editing.value?.roles ?? []).filter(
+    (role) => !roleOptions.value.some((option) => option.id === role.id),
+  ),
+])
+async function chooseDepartment(value: number | undefined) {
+  selectedDepartment.value = value
+  page.value = 1
+  await load()
+}
+async function refreshDepartments() {
+  await loadDepartments()
+  if (
+    typeof selectedDepartment.value === 'number' &&
+    !departmentsError.value &&
+    !flattenDepartments(departments.value).some((node) => node.id === selectedDepartment.value)
+  ) {
+    selectedDepartment.value = undefined
+    toast.show('所选部门已删除，已切换至全部部门', 'info')
+    page.value = 1
+    await load()
+  }
+}
 
 const filters = reactive({
   username: '',
-  status: '' as '' | UserStatus,
+  status: '',
 })
+
 const page = ref(1)
-const size = ref(20)
-const sort = ref('createdAt,desc')
+const size = ref(10)
 const items = ref<UserSummary[]>([])
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size.value)))
+const deleteTarget = ref<UserDetail | null>(null)
+const deletePreparing = ref<number>()
+const deleting = ref(false)
+const deleteError = ref('')
+
+function protectedUser(user: UserSummary): boolean {
+  return user.id === auth.user?.id || user.roles?.some((role) => role.code === 'SUPER_ADMIN')
+}
+
+async function requestDelete(user: UserSummary): Promise<void> {
+  if (protectedUser(user) || deletePreparing.value !== undefined || deleting.value) return
+  deletePreparing.value = user.id
+  deleteError.value = ''
+  try {
+    const detail = await fetchUser(user.id)
+    if (protectedUser(detail)) {
+      toast.show('当前登录账号或超级管理员账号不可删除', 'error')
+      return
+    }
+    deleteTarget.value = detail
+  } catch (caught) {
+    toast.show(caught instanceof ApiError ? caught.message : '加载用户失败，请重试', 'error')
+  } finally {
+    deletePreparing.value = undefined
+  }
+}
+
+function closeDelete(): void {
+  if (deleting.value) return
+  deleteTarget.value = null
+  deleteError.value = ''
+}
+
+async function confirmDelete(): Promise<void> {
+  const target = deleteTarget.value
+  if (!target || deleting.value) return
+  deleting.value = true
+  deleteError.value = ''
+  try {
+    await deleteUser(target.id, target.version)
+    deleteTarget.value = null
+    toast.show('用户已删除', 'success')
+    await load()
+  } catch (caught) {
+    deleteError.value = caught instanceof ApiError ? caught.message : '删除失败，请稍后重试'
+  } finally {
+    deleting.value = false
+  }
+}
+
+const columns = [
+  { key: 'username', label: '用户' },
+  { key: 'departmentName', label: '部门' },
+  { key: 'roles', label: '角色' },
+  { key: 'phone', label: '手机号' },
+  { key: 'status', label: '状态', width: '104px' },
+  { key: 'createdAt', label: '创建时间', width: '168px' },
+  { key: 'actions', label: '操作', align: 'right' as const, sticky: true, width: '176px' },
+]
 
 const roleOptions = ref<RoleSummary[]>([])
+const roleOptionsLoading = ref(false)
 
 const formOpen = ref(false)
 const editing = ref<UserDetail | null>(null)
 const saving = ref(false)
 const formError = ref('')
-const form = reactive({
-  username: '',
-  password: '',
-  nickname: '',
-  email: '',
-  phone: '',
-  roleIds: [] as number[],
-  version: 0,
+const roleIds = ref<number[]>([])
+
+const userSchema = z
+  .object({
+    username: z.string(),
+    password: z.string(),
+    nickname: z.string().trim().min(1, '请输入昵称').max(64, '昵称最多 64 个字符'),
+    email: z.string().trim(),
+    phone: z.string().trim(),
+    departmentId: z.number({ required_error: '请选择所属部门' }).int().positive('请选择所属部门'),
+  })
+  .superRefine((values, context) => {
+    if (!editing.value) {
+      if (!/^[A-Za-z0-9_.-]{3,64}$/.test(values.username)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['username'],
+          message: '用户名需 3-64 位，只允许字母、数字、下划线、点和连字符',
+        })
+      }
+      if (!/^(?=.*[A-Za-z])(?=.*\d).{8,72}$/.test(values.password)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['password'],
+          message: '初始密码需 8-72 位并同时包含字母和数字',
+        })
+      }
+    }
+    if (values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['email'],
+        message: '邮箱格式不正确',
+      })
+    }
+    if (values.phone && !/^[0-9+-]{6,32}$/.test(values.phone)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phone'],
+        message: '手机号格式不正确',
+      })
+    }
+  })
+
+type UserFormValues = z.infer<typeof userSchema>
+type UserFormField = keyof UserFormValues
+
+const userForm = useForm({
+  validationSchema: toTypedSchema(userSchema),
+  initialValues: {
+    username: '',
+    password: '',
+    nickname: '',
+    email: '',
+    phone: '',
+    departmentId: undefined,
+  },
 })
+
+const {
+  defineField,
+  errors: validationErrors,
+  handleSubmit,
+  resetForm,
+  setFieldError,
+  submitCount,
+} = userForm
+const errors = computed(() =>
+  Object.fromEntries(
+    Object.entries(validationErrors.value).filter(
+      ([key]) => submitCount.value > 0 || userForm.isFieldTouched(key as UserFormField),
+    ),
+  ),
+)
+const [username, usernameAttrs] = defineField('username')
+const [password, passwordAttrs] = defineField('password')
+const [nickname, nicknameAttrs] = defineField('nickname')
+const [email, emailAttrs] = defineField('email')
+const [phone, phoneAttrs] = defineField('phone')
+const [departmentId] = defineField('departmentId')
+
+const USER_FORM_FIELDS: UserFormField[] = [
+  'username',
+  'password',
+  'nickname',
+  'email',
+  'phone',
+  'departmentId',
+]
+
+function applyFieldErrors(caught: ApiError): boolean {
+  let applied = false
+  for (const item of caught.fieldErrors) {
+    if ((USER_FORM_FIELDS as string[]).includes(item.field)) {
+      setFieldError(item.field as UserFormField, item.message)
+      applied = true
+    }
+  }
+  return applied
+}
 
 const roleDialogOpen = ref(false)
 const roleTarget = ref<UserDetail | null>(null)
@@ -58,85 +272,122 @@ const roleError = ref('')
 
 const passwordDialogOpen = ref(false)
 const passwordTarget = ref<UserDetail | null>(null)
-const newPassword = ref('')
 const passwordSaving = ref(false)
 const passwordError = ref('')
 
-const logoutTarget = ref<UserSummary | null>(null)
-const loggingOut = ref(false)
+const passwordSchema = z.object({
+  newPassword: z
+    .string()
+    .regex(/^(?=.*[A-Za-z])(?=.*\d).{8,72}$/, '新密码需 8-72 位并同时包含字母和数字'),
+})
 
-async function load() {
+const passwordForm = useForm({
+  validationSchema: toTypedSchema(passwordSchema),
+  initialValues: { newPassword: '' },
+})
+
+const {
+  defineField: definePasswordField,
+  errors: passwordErrors,
+  handleSubmit: handlePasswordSubmit,
+  resetForm: resetPasswordForm,
+} = passwordForm
+const [newPassword, newPasswordAttrs] = definePasswordField('newPassword')
+
+let requestGeneration = 0
+async function load(): Promise<void> {
+  const generation = ++requestGeneration
   loading.value = true
   error.value = ''
   try {
     const result = await fetchUsers({
       page: page.value,
       size: size.value,
-      sort: sort.value,
-      username: filters.username.trim() || undefined,
-      status: filters.status || undefined,
+      sort: 'createdAt,desc',
+      keyword: filters.username.trim() || undefined,
+      departmentId:
+        typeof selectedDepartment.value === 'number' ? selectedDepartment.value : undefined,
+      status: filters.status ? (filters.status as UserStatus) : undefined,
     })
+    if (generation !== requestGeneration) return
     items.value = result.items
     total.value = result.total
+    const lastPage = Math.max(1, Math.ceil(result.total / size.value))
+    if (page.value > lastPage) {
+      page.value = lastPage
+      await load()
+    }
   } catch (caught) {
+    if (generation !== requestGeneration) return
     items.value = []
     total.value = 0
     error.value = caught instanceof ApiError ? caught.message : '加载失败，请稍后重试'
   } finally {
-    loading.value = false
+    if (generation === requestGeneration) loading.value = false
   }
 }
 
-function search() {
+function search(): void {
   page.value = 1
   void load()
 }
 
-function resetFilters() {
+function resetFilters(): void {
+  selectedDepartment.value = undefined
   filters.username = ''
   filters.status = ''
-  sort.value = 'createdAt,desc'
   page.value = 1
   void load()
 }
 
-function changeSize() {
+function changePage(next: number): void {
+  page.value = next
+  void load()
+}
+
+function changeSize(next: number): void {
+  size.value = next
   page.value = 1
   void load()
 }
 
-function previousPage() {
-  if (page.value > 1) {
-    page.value -= 1
-    void load()
-  }
-}
-
-function nextPage() {
-  if (page.value < totalPages.value) {
-    page.value += 1
-    void load()
-  }
-}
-
-async function loadRoleOptions() {
+async function loadRoleOptions(): Promise<void> {
+  if (!canReadRoles.value) return
+  roleOptionsError.value = ''
+  roleOptionsLoading.value = true
   try {
     const result = await fetchRoles({ page: 1, size: 100, sort: 'sort,asc', status: 'ENABLED' })
     roleOptions.value = result.items
   } catch {
+    roleOptionsError.value = '角色加载失败，请重试'
     roleOptions.value = []
+  } finally {
+    roleOptionsLoading.value = false
   }
 }
 
-function openCreate() {
+function openCreate(): void {
   editing.value = null
-  form.username = ''
-  form.password = ''
-  form.nickname = ''
-  form.email = ''
-  form.phone = ''
-  form.roleIds = []
-  form.version = 0
+  resetForm({
+    values: {
+      username: '',
+      password: '',
+      nickname: '',
+      email: '',
+      phone: '',
+      departmentId:
+        typeof selectedDepartment.value === 'number' &&
+        flattenDepartments(departments.value).some(
+          (row) => row.id === selectedDepartment.value && row.selectable,
+        )
+          ? selectedDepartment.value
+          : undefined,
+    },
+  })
+  initialStatus.value = 'ENABLED'
+  passwordVisible.value = false
+  void loadDepartments()
+  roleIds.value = []
   formError.value = ''
   formOpen.value = true
   if (roleOptions.value.length === 0) {
@@ -144,91 +395,93 @@ function openCreate() {
   }
 }
 
-async function openEdit(user: UserSummary) {
+async function openEdit(user: UserSummary): Promise<void> {
   formError.value = ''
   try {
     const detail = await fetchUser(user.id)
     editing.value = detail
-    form.username = detail.username
-    form.password = ''
-    form.nickname = detail.nickname ?? ''
-    form.email = detail.email ?? ''
-    form.phone = detail.phone ?? ''
-    form.version = detail.version
+    resetForm({
+      values: {
+        username: detail.username,
+        password: '',
+        nickname: detail.nickname ?? '',
+        email: detail.email ?? '',
+        phone: detail.phone ?? '',
+        departmentId: detail.departmentId,
+      },
+    })
+    roleIds.value = detail.roles.map((role) => role.id)
     formOpen.value = true
+    void loadDepartments()
+    void loadRoleOptions()
   } catch (caught) {
     toast.show(caught instanceof ApiError ? caught.message : '加载用户失败', 'error')
   }
 }
 
-async function save() {
+const saveUser = handleSubmit(async (values) => {
   formError.value = ''
-  if (!form.nickname.trim()) {
-    formError.value = '请输入昵称'
+  if (departmentsLoading.value || departmentsError.value) {
+    formError.value = '请先加载部门后再保存'
     return
   }
-  if (!editing.value) {
-    if (!/^[A-Za-z0-9_.-]{3,64}$/.test(form.username)) {
-      formError.value = '用户名需 3-64 位，只允许字母、数字、下划线、点和连字符'
-      return
-    }
-    if (!/^(?=.*[A-Za-z])(?=.*\d).{8,72}$/.test(form.password)) {
-      formError.value = '初始密码需 8-72 位并同时包含字母和数字'
-      return
-    }
-  }
-  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    formError.value = '邮箱格式不正确'
-    return
-  }
-  if (form.phone && !/^[0-9+-]{6,32}$/.test(form.phone)) {
-    formError.value = '手机号格式不正确'
-    return
-  }
-
   saving.value = true
+  let profileSaved = false
   try {
     if (editing.value) {
-      await updateUser(editing.value.id, {
-        nickname: form.nickname.trim(),
-        email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
-        version: form.version,
+      const rolesChanged =
+        canReadRoles.value &&
+        canAssignRoles.value &&
+        (roleIds.value.length !== editing.value.roles.length ||
+          editing.value.roles.some((role) => !roleIds.value.includes(role.id)))
+      if (rolesChanged && (roleOptionsLoading.value || roleOptionsError.value)) {
+        formError.value = '请先完成角色加载后再保存'
+        return
+      }
+      editing.value = await updateUserProfile(editing.value.id, {
+        nickname: values.nickname.trim(),
+        email: values.email.trim() || null,
+        phone: values.phone.trim() || null,
+        version: editing.value.version,
+        departmentId: values.departmentId,
       })
-      toast.show('用户资料已更新', 'success')
+      profileSaved = true
+      if (rolesChanged) {
+        await assignUserRoles(editing.value.id, roleIds.value)
+      }
+      toast.show('用户信息已更新', 'success')
     } else {
       await createUser({
-        username: form.username.trim(),
-        password: form.password,
-        nickname: form.nickname.trim(),
-        email: form.email.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-        roleIds: form.roleIds,
+        username: values.username.trim(),
+        password: values.password,
+        nickname: values.nickname.trim(),
+        email: values.email.trim() || undefined,
+        phone: values.phone.trim() || undefined,
+        roleIds: roleIds.value,
+        departmentId: values.departmentId,
+        status: initialStatus.value,
       })
-      toast.show('用户已创建', 'success')
+      toast.show('用户已新增', 'success')
     }
     formOpen.value = false
     await load()
   } catch (caught) {
-    formError.value = caught instanceof ApiError ? caught.message : '保存失败，请稍后重试'
+    if (profileSaved) {
+      formError.value = `用户资料已保存，角色保存失败：${caught instanceof ApiError ? caught.message : '请稍后重试'}。可再次保存重试。`
+      await load()
+    } else if (caught instanceof ApiError) {
+      if (!applyFieldErrors(caught)) {
+        formError.value = caught.message
+      }
+    } else {
+      formError.value = '保存失败，请稍后重试'
+    }
   } finally {
     saving.value = false
   }
-}
+})
 
-async function toggleStatus(user: UserSummary) {
-  const next: UserStatus = user.status === 'ENABLED' ? 'DISABLED' : 'ENABLED'
-  try {
-    const detail = await fetchUser(user.id)
-    await updateUserStatus(user.id, next, detail.version)
-    toast.show(next === 'ENABLED' ? '用户已启用' : '用户已禁用', 'success')
-    await load()
-  } catch (caught) {
-    toast.show(caught instanceof ApiError ? caught.message : '状态更新失败', 'error')
-  }
-}
-
-async function openRoles(user: UserSummary) {
+async function openRoles(user: UserSummary): Promise<void> {
   roleError.value = ''
   selectedRoleIds.value = []
   try {
@@ -244,16 +497,7 @@ async function openRoles(user: UserSummary) {
   }
 }
 
-function toggleRole(id: number) {
-  const index = selectedRoleIds.value.indexOf(id)
-  if (index >= 0) {
-    selectedRoleIds.value.splice(index, 1)
-  } else {
-    selectedRoleIds.value.push(id)
-  }
-}
-
-async function saveRoles() {
+async function saveRoles(): Promise<void> {
   if (!roleTarget.value) {
     return
   }
@@ -271,9 +515,9 @@ async function saveRoles() {
   }
 }
 
-async function openPassword(user: UserSummary) {
+async function openPassword(user: UserSummary): Promise<void> {
   passwordError.value = ''
-  newPassword.value = ''
+  resetPasswordForm()
   try {
     passwordTarget.value = await fetchUser(user.id)
     passwordDialogOpen.value = true
@@ -282,19 +526,15 @@ async function openPassword(user: UserSummary) {
   }
 }
 
-async function savePassword() {
+const savePassword = handlePasswordSubmit(async (values) => {
   if (!passwordTarget.value) {
-    return
-  }
-  if (!/^(?=.*[A-Za-z])(?=.*\d).{8,72}$/.test(newPassword.value)) {
-    passwordError.value = '新密码需 8-72 位并同时包含字母和数字'
     return
   }
   passwordSaving.value = true
   passwordError.value = ''
   try {
     await resetUserPassword(passwordTarget.value.id, {
-      newPassword: newPassword.value,
+      newPassword: values.newPassword,
       version: passwordTarget.value.version,
     })
     toast.show('密码已重置，用户下次登录需修改密码', 'success')
@@ -305,360 +545,434 @@ async function savePassword() {
   } finally {
     passwordSaving.value = false
   }
-}
+})
 
-async function doForceLogout(device?: string) {
-  if (!logoutTarget.value) {
-    return
-  }
-  loggingOut.value = true
-  try {
-    if (device) {
-      await forceLogoutDevice(logoutTarget.value.id, device)
-    } else {
-      await forceLogout(logoutTarget.value.id)
-    }
-    toast.show('已强制下线', 'success')
-    logoutTarget.value = null
-  } catch (caught) {
-    toast.show(caught instanceof ApiError ? caught.message : '操作失败', 'error')
-  } finally {
-    loggingOut.value = false
-  }
-}
-
-function statusText(status: UserStatus) {
-  return status === 'ENABLED' ? '启用' : '禁用'
-}
-
-function statusClass(status: UserStatus) {
-  return status === 'ENABLED'
-    ? 'bg-emerald-50 text-emerald-700'
-    : 'bg-destructive/10 text-destructive'
-}
-
-function formatDateTime(value: string | null | undefined) {
-  return value ? value.replace('T', ' ').slice(0, 19) : '-'
+function statusText(status: UserStatus): string {
+  return status === 'ENABLED' ? '正常' : '禁用'
 }
 
 onMounted(() => {
   void load()
+  void loadDepartments()
 })
 </script>
 
 <template>
-  <PageHeader title="用户管理" description="维护用户资料、角色与登录状态。" />
+  <PageHeader
+    class="user-page-header"
+    title="用户管理"
+    description="维护后台账号、所属部门与角色；禁用的账号无法登录。"
+  >
+    <template #actions>
+      <AppButton v-permission="'iam:user:create'" @click="openCreate">
+        <Plus :size="14" aria-hidden="true" />
+        新增用户
+      </AppButton>
+    </template>
+  </PageHeader>
 
-  <div class="mt-6 rounded-xl border bg-card">
-    <form class="flex flex-wrap items-end gap-3 border-b p-4" @submit.prevent="search">
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="user-username">用户名</label>
-        <input
-          id="user-username"
-          v-model="filters.username"
-          type="text"
-          maxlength="64"
-          placeholder="用户名前缀"
-          class="flex h-9 w-52 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+  <div class="user-management mt-5 grid min-w-0 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+    <aside aria-label="组织部门" class="user-departments app-panel hidden self-start p-4 lg:block">
+      <p v-if="departmentsLoading && !departments.length" class="py-4 text-xs text-ink-soft">
+        正在加载部门…
+      </p>
+      <AppErrorState
+        v-if="departmentsError"
+        :message="departmentsError"
+        @retry="refreshDepartments"
+      />
+      <DepartmentTree
+        :model-value="selectedDepartment"
+        :nodes="departments"
+        @update:model-value="chooseDepartment"
+      />
+    </aside>
+    <div class="min-w-0 space-y-4">
+      <div class="app-panel p-4 lg:hidden">
+        <DepartmentFilter
+          :nodes="departments"
+          :model-value="selectedDepartment"
+          @update:model-value="chooseDepartment"
+        /><AppErrorState
+          v-if="departmentsError"
+          :message="departmentsError"
+          @retry="refreshDepartments"
         />
       </div>
+      <AppFilterBar @submit="search">
+        <AppField label="关键字" for="user-username" class="w-[220px]">
+          <AppInput
+            id="user-username"
+            v-model="filters.username"
+            type="text"
+            maxlength="64"
+            placeholder="账号 / 显示名称 / 手机号"
+          />
+        </AppField>
 
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="user-status">状态</label>
-        <select
-          id="user-status"
-          v-model="filters.status"
-          class="flex h-9 w-32 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
-          <option value="">全部</option>
-          <option value="ENABLED">启用</option>
-          <option value="DISABLED">禁用</option>
-        </select>
-      </div>
+        <AppField label="状态" for="user-status" class="w-[150px]">
+          <AppSelect
+            id="user-status"
+            v-model="filters.status"
+            :options="[
+              { label: '全部', value: '' },
+              { label: '启用', value: 'ENABLED' },
+              { label: '禁用', value: 'DISABLED' },
+            ]"
+          />
+        </AppField>
 
-      <div class="space-y-1">
-        <label class="text-xs text-muted-foreground" for="user-sort">排序</label>
-        <select
-          id="user-sort"
-          v-model="sort"
-          class="flex h-9 w-40 rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
-          <option value="createdAt,desc">创建时间 ↓</option>
-          <option value="createdAt,asc">创建时间 ↑</option>
-          <option value="username,asc">用户名 ↑</option>
-          <option value="username,desc">用户名 ↓</option>
-          <option value="lastLoginAt,desc">最近登录 ↓</option>
-        </select>
-      </div>
-
-      <button
-        type="submit"
-        class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-        :disabled="loading"
-      >
-        查询
-      </button>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center justify-center rounded-md border border-input px-4 text-sm font-medium transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-        :disabled="loading"
-        @click="resetFilters"
-      >
-        重置
-      </button>
-      <button
-        v-permission="'iam:user:create'"
-        type="button"
-        class="ml-auto inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        @click="openCreate"
-      >
-        新增用户
-      </button>
-    </form>
-
-    <div
-      v-if="error"
-      class="flex items-center justify-between gap-3 border-b bg-destructive/5 px-4 py-3 text-sm text-destructive"
-    >
-      <span>{{ error }}</span>
-      <button type="button" class="shrink-0 underline-offset-4 hover:underline" @click="load">
-        重试
-      </button>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[980px] text-sm">
-        <thead class="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-          <tr>
-            <th class="px-4 py-3 font-medium">用户名</th>
-            <th class="px-4 py-3 font-medium">昵称</th>
-            <th class="px-4 py-3 font-medium">状态</th>
-            <th class="px-4 py-3 font-medium">最近登录</th>
-            <th class="px-4 py-3 font-medium">创建时间</th>
-            <th class="px-4 py-3 text-right font-medium">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">加载中...</td>
-          </tr>
-          <tr v-else-if="items.length === 0">
-            <td colspan="6" class="px-4 py-10 text-center text-muted-foreground">暂无数据</td>
-          </tr>
-          <template v-else>
-            <tr v-for="user in items" :key="user.id" class="border-b last:border-0">
-              <td class="px-4 py-3 font-medium">{{ user.username }}</td>
-              <td class="px-4 py-3 text-muted-foreground">{{ user.nickname || '-' }}</td>
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                  :class="statusClass(user.status)"
-                >
-                  {{ statusText(user.status) }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-muted-foreground">
-                {{ formatDateTime(user.lastLoginAt) }}
-              </td>
-              <td class="px-4 py-3 text-muted-foreground">{{ formatDateTime(user.createdAt) }}</td>
-              <td class="px-4 py-3">
-                <div class="flex flex-wrap justify-end gap-3 text-primary">
-                  <button
-                    v-permission="'iam:user:update'"
-                    type="button"
-                    class="hover:underline"
-                    @click="openEdit(user)"
-                  >
-                    编辑
-                  </button>
-                  <button
-                    v-permission="'iam:user:assign-role'"
-                    type="button"
-                    class="hover:underline"
-                    @click="openRoles(user)"
-                  >
-                    角色
-                  </button>
-                  <button
-                    v-permission="'iam:user:reset-password'"
-                    type="button"
-                    class="hover:underline"
-                    @click="openPassword(user)"
-                  >
-                    重置密码
-                  </button>
-                  <button
-                    v-permission="'iam:user:status'"
-                    type="button"
-                    class="hover:underline"
-                    :class="user.status === 'ENABLED' ? 'text-destructive' : 'text-primary'"
-                    @click="toggleStatus(user)"
-                  >
-                    {{ user.status === 'ENABLED' ? '禁用' : '启用' }}
-                  </button>
-                  <button
-                    v-permission="'iam:user:force-logout'"
-                    type="button"
-                    class="hover:underline"
-                    @click="logoutTarget = user"
-                  >
-                    下线
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm">
-      <span class="text-muted-foreground">共 {{ total }} 条</span>
-      <div class="flex items-center gap-2">
-        <label class="flex items-center gap-1 text-muted-foreground">
-          每页
-          <select
-            v-model.number="size"
-            class="h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring"
-            @change="changeSize"
+        <template #actions>
+          <AppButton type="submit" :loading="loading" :icon="Search">查询</AppButton>
+          <AppButton variant="outline" :disabled="loading" :icon="RefreshCw" @click="resetFilters"
+            >重置</AppButton
           >
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-            <option :value="50">50</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          class="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm disabled:pointer-events-none disabled:opacity-40"
-          :disabled="page <= 1 || loading"
-          @click="previousPage"
+        </template>
+      </AppFilterBar>
+
+      <AppPanel class="user-list-panel" :show-footer="!error && total > 0">
+        <template #header>
+          <div class="flex min-w-0 items-baseline gap-3">
+            <h2 class="section-label">用户列表</h2>
+            <span v-if="!error" class="text-[12px] font-medium text-ink-soft"
+              >共 {{ total }} 条</span
+            >
+          </div>
+        </template>
+
+        <template #tools>
+          <AppButton
+            class="user-list-tool"
+            variant="outline"
+            size="icon-sm"
+            :loading="loading"
+            aria-label="刷新"
+            title="刷新"
+            @click="load"
+          >
+            <RefreshCw v-if="!loading" :size="17" aria-hidden="true" />
+          </AppButton>
+        </template>
+
+        <AppErrorState v-if="error" :message="error" @retry="load" />
+
+        <AppDataTable
+          v-else
+          :columns="columns"
+          :rows="items"
+          :loading="loading"
+          :min-width="980"
+          empty-title="暂无用户"
+          empty-description="调整筛选条件，或新增第一个用户。"
         >
-          上一页
-        </button>
-        <span class="min-w-16 text-center text-muted-foreground">{{ page }} / {{ totalPages }}</span>
-        <button
-          type="button"
-          class="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm disabled:pointer-events-none disabled:opacity-40"
-          :disabled="page >= totalPages || loading"
-          @click="nextPage"
-        >
-          下一页
-        </button>
-      </div>
+          <template #cell-username="{ row }"
+            ><div class="flex items-center gap-2.5">
+              <span class="user-avatar" aria-hidden="true">{{
+                (row.nickname || row.username).slice(0, 1)
+              }}</span>
+              <div class="min-w-0">
+                <div class="font-[620] text-ink">{{ row.nickname || row.username }}</div>
+                <div class="mt-px text-xs text-ink-soft">@{{ row.username }}</div>
+              </div>
+            </div></template
+          >
+          <template #cell-departmentName="{ row }"
+            ><span class="text-ink-muted">{{ row.departmentName || '未分配部门' }}</span></template
+          >
+          <template #cell-roles="{ row }"
+            ><div class="flex max-w-60 flex-wrap gap-1">
+              <span
+                v-for="role in row.roles"
+                :key="role.id"
+                class="rounded-full bg-brand/10 px-[9px] py-0.5 text-[12px] font-semibold text-brand"
+                >{{ role.name }}{{ role.status === 'DISABLED' ? '（停用）' : '' }}</span
+              ><span v-if="!row.roles?.length" class="text-ink-soft">未分配角色</span>
+            </div></template
+          >
+          <template #cell-phone="{ row }"
+            ><span class="tnum text-ink-muted">{{ row.phone || '—' }}</span></template
+          >
+          <template #cell-status="{ row }">
+            <AppStatusTag
+              class="user-status"
+              :class="row.status === 'ENABLED' && 'user-status-enabled'"
+              :tone="row.status === 'ENABLED' ? 'success' : 'danger'"
+              :label="statusText(row.status)"
+            />
+          </template>
+
+          <template #cell-lastLoginAt="{ row }">
+            <span class="tnum text-[12px] text-ink-soft">
+              {{ formatDateTime(row.lastLoginAt) }}
+            </span>
+          </template>
+
+          <template #cell-createdAt="{ row }">
+            <span class="tnum whitespace-nowrap text-[13px] text-ink-soft">
+              {{ formatDateTime(row.createdAt) }}
+            </span>
+          </template>
+
+          <template #cell-actions="{ row }">
+            <div class="user-actions flex items-center justify-end gap-0.5">
+              <AppButton
+                v-permission="'iam:user:update'"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="编辑"
+                title="编辑"
+                @click="openEdit(row)"
+              >
+                <Pencil :size="16" :stroke-width="1.6" aria-hidden="true" />
+              </AppButton>
+              <AppButton
+                v-permission="'iam:user:assign-role'"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="分配角色"
+                title="分配角色"
+                @click="openRoles(row)"
+              >
+                <Shield :size="16" :stroke-width="1.6" aria-hidden="true" />
+              </AppButton>
+              <AppButton
+                v-permission="'iam:user:reset-password'"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="重置密码"
+                title="重置密码"
+                @click="openPassword(row)"
+              >
+                <KeyRound :size="16" :stroke-width="1.6" aria-hidden="true" />
+              </AppButton>
+              <AppButton
+                v-permission="'iam:user:delete'"
+                :press-animation="false"
+                variant="ghost"
+                class="transition-none! hover:bg-destructive/10! hover:text-destructive! active:bg-destructive/15! active:text-destructive! focus-visible:text-destructive! focus-visible:ring-destructive/30!"
+                size="icon-sm"
+                aria-label="删除"
+                :title="protectedUser(row) ? '当前登录账号或超级管理员账号不可删除' : '删除'"
+                :disabled="protectedUser(row) || deletePreparing !== undefined || deleting"
+                :aria-busy="deletePreparing === row.id"
+                @click="requestDelete(row)"
+              >
+                <Trash2 :size="16" :stroke-width="1.6" aria-hidden="true" />
+              </AppButton>
+            </div>
+          </template>
+        </AppDataTable>
+
+        <template #footer>
+          <AppPagination
+            appearance="user-list"
+            :page="page"
+            :page-size="size"
+            :total="total"
+            :loading="loading"
+            @update:page="changePage"
+            @update:page-size="changeSize"
+          />
+        </template>
+      </AppPanel>
     </div>
   </div>
 
   <AppDialog
     :open="formOpen"
     :title="editing ? '编辑用户' : '新增用户'"
+    size="lg"
     @close="formOpen = false"
   >
-    <form id="user-form" class="space-y-4" @submit.prevent="save">
-      <div class="space-y-1">
-        <label class="text-sm font-medium" for="user-form-username">用户名</label>
-        <input
-          id="user-form-username"
-          v-model="form.username"
-          type="text"
-          maxlength="64"
-          :disabled="!!editing"
-          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring disabled:bg-muted"
-        />
-        <p v-if="editing" class="text-xs text-muted-foreground">用户名不可修改</p>
-      </div>
-
-      <div v-if="!editing" class="space-y-1">
-        <label class="text-sm font-medium" for="user-form-password">初始密码</label>
-        <input
-          id="user-form-password"
-          v-model="form.password"
-          type="password"
-          autocomplete="new-password"
-          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-        />
-        <p class="text-xs text-muted-foreground">创建后用户首次登录必须修改密码</p>
-      </div>
-
-      <div class="space-y-1">
-        <label class="text-sm font-medium" for="user-form-nickname">昵称</label>
-        <input
-          id="user-form-nickname"
-          v-model="form.nickname"
-          type="text"
-          maxlength="64"
-          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-        />
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-1">
-          <label class="text-sm font-medium" for="user-form-email">邮箱</label>
-          <input
+    <form id="user-form" class="space-y-4" @submit="saveUser">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <AppField
+          label="登录账号"
+          for="user-form-username"
+          :error="errors.username"
+          error-id="user-form-username-error"
+          required
+          :hint="editing ? '用户名不可修改' : undefined"
+        >
+          <AppInput
+            id="user-form-username"
+            v-model="username"
+            v-bind="usernameAttrs"
+            placeholder="字母、数字组合"
+            maxlength="64"
+            :disabled="!!editing"
+            :invalid="!!errors.username"
+            :aria-describedby="errors.username ? 'user-form-username-error' : undefined"
+          />
+        </AppField>
+        <AppField
+          label="显示名称"
+          for="user-form-nickname"
+          :error="errors.nickname"
+          error-id="user-form-nickname-error"
+          required
+        >
+          <AppInput
+            id="user-form-nickname"
+            v-model="nickname"
+            v-bind="nicknameAttrs"
+            placeholder="请输入显示名称"
+            maxlength="64"
+            :invalid="!!errors.nickname"
+            :aria-describedby="errors.nickname ? 'user-form-nickname-error' : undefined"
+          />
+        </AppField>
+        <AppField
+          v-if="!editing"
+          class="sm:col-span-2"
+          label="初始密码"
+          for="user-form-password"
+          :error="errors.password"
+          error-id="user-form-password-error"
+          required
+          hint="创建后用户首次登录必须修改密码"
+        >
+          <AppInput
+            id="user-form-password"
+            v-model="password"
+            v-bind="passwordAttrs"
+            :type="passwordVisible ? 'text' : 'password'"
+            autocomplete="new-password"
+            :invalid="!!errors.password"
+            :aria-describedby="errors.password ? 'user-form-password-error' : undefined"
+            ><template #trailing
+              ><button
+                type="button"
+                class="grid h-7 w-7 place-items-center rounded text-ink-soft focus-visible:outline-2 focus-visible:outline-brand"
+                :aria-label="passwordVisible ? '隐藏初始密码' : '显示初始密码'"
+                :aria-pressed="passwordVisible"
+                @click="passwordVisible = !passwordVisible"
+              >
+                <EyeOff v-if="passwordVisible" :size="15" aria-hidden="true" /><Eye
+                  v-else
+                  :size="15"
+                  aria-hidden="true"
+                /></button></template
+          ></AppInput>
+        </AppField>
+        <AppField
+          label="手机号"
+          for="user-form-phone"
+          :error="errors.phone"
+          error-id="user-form-phone-error"
+        >
+          <AppInput
+            id="user-form-phone"
+            v-model="phone"
+            v-bind="phoneAttrs"
+            maxlength="32"
+            autocomplete="tel"
+            :invalid="!!errors.phone"
+            :aria-describedby="errors.phone ? 'user-form-phone-error' : undefined"
+          />
+        </AppField>
+        <AppField
+          label="电子邮箱"
+          for="user-form-email"
+          :error="errors.email"
+          error-id="user-form-email-error"
+        >
+          <AppInput
             id="user-form-email"
-            v-model="form.email"
+            v-model="email"
+            v-bind="emailAttrs"
             type="email"
             maxlength="128"
-            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
+            autocomplete="email"
+            :invalid="!!errors.email"
+            :aria-describedby="errors.email ? 'user-form-email-error' : undefined"
           />
-        </div>
-        <div class="space-y-1">
-          <label class="text-sm font-medium" for="user-form-phone">手机号</label>
-          <input
-            id="user-form-phone"
-            v-model="form.phone"
-            type="text"
-            maxlength="32"
-            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
+        </AppField>
+        <AppField
+          label="所属部门"
+          for="user-form-department"
+          required
+          :error="errors.departmentId"
+          :hint="
+            editing?.departmentStatus === 'DISABLED'
+              ? '当前部门已停用，可保留或调整归属'
+              : undefined
+          "
+          ><DepartmentSelect
+            id="user-form-department"
+            v-model="departmentId"
+            :options="departments"
+            :invalid="!!errors.departmentId"
+            :disabled="departmentsLoading"
+            :preserve-id="editing?.departmentId"
+        /></AppField>
+        <AppField
+          label="角色"
+          :hint="
+            editing && (!canReadRoles || !canAssignRoles)
+              ? '当前角色操作权限不足，仅可查看'
+              : '选填；未分配角色不具备角色授予的业务权限'
+          "
+          ><RoleSelect
+            v-if="(!editing && canReadRoles) || (editing && canReadRoles && canAssignRoles)"
+            v-model="roleIds"
+            :roles="formRoleOptions"
+            :disabled="roleOptionsLoading || !!roleOptionsError || saving"
           />
-        </div>
-      </div>
-
-      <div v-if="!editing" class="space-y-1">
-        <span class="text-sm font-medium">初始角色</span>
-        <div class="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
-          <label
-            v-for="role in roleOptions"
-            :key="role.id"
-            class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-accent"
-          >
-            <input
-              type="checkbox"
-              :checked="form.roleIds.includes(role.id)"
-              @change="
-                form.roleIds.includes(role.id)
-                  ? form.roleIds.splice(form.roleIds.indexOf(role.id), 1)
-                  : form.roleIds.push(role.id)
-              "
-            />
-            {{ role.name }}
-            <span class="font-mono text-xs text-muted-foreground">{{ role.code }}</span>
-          </label>
-          <p v-if="roleOptions.length === 0" class="px-1 py-2 text-xs text-muted-foreground">
-            暂无可用角色
+          <p v-else-if="editing" class="py-2 text-xs text-ink-muted">
+            {{ editing.roles.map((role) => role.name).join('、') || '未分配角色' }}
           </p>
-        </div>
+          <p v-else class="py-2 text-xs text-ink-soft">可在创建后由有权限的管理员分配角色</p>
+          <p v-if="roleOptionsError" role="alert" class="text-xs text-destructive">
+            {{ roleOptionsError
+            }}<AppButton variant="ghost" size="sm" @click="loadRoleOptions">重试</AppButton>
+          </p></AppField
+        >
+        <AppField v-if="!editing" label="账号状态"
+          ><div class="inline-flex items-center gap-2.5">
+            <button
+              type="button"
+              role="switch"
+              :aria-checked="initialStatus === 'ENABLED'"
+              aria-label="账号启用状态"
+              class="relative h-[22px] w-[38px] shrink-0 rounded-full shadow-[inset_0_1px_2px_rgba(16,20,24,0.14)] transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+              :class="initialStatus === 'ENABLED' ? 'bg-brand-bright' : 'bg-ink/20'"
+              @click="initialStatus = initialStatus === 'ENABLED' ? 'DISABLED' : 'ENABLED'"
+            >
+              <span
+                class="absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow-[0_1px_3px_rgba(16,20,24,0.22),0_2px_6px_rgba(16,20,24,0.1)] transition-[left]"
+                :class="initialStatus === 'ENABLED' ? 'left-[18px]' : 'left-0.5'"
+              /></button
+            ><span class="text-[13px] text-ink-muted">{{
+              initialStatus === 'ENABLED' ? '启用，允许登录' : '禁用，暂不允许登录'
+            }}</span>
+          </div></AppField
+        >
       </div>
+      <p v-if="departmentsLoading" class="text-xs text-ink-soft">正在加载部门…</p>
+      <p v-if="departmentsError" role="alert" class="text-xs text-destructive">
+        {{ departmentsError
+        }}<AppButton variant="ghost" size="sm" @click="loadDepartments">重试</AppButton>
+      </p>
 
-      <p v-if="formError" class="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+      <p
+        v-if="formError"
+        class="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-[12px] leading-5 text-destructive"
+        role="alert"
+      >
         {{ formError }}
       </p>
     </form>
+
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="formOpen = false"
-      >
-        取消
-      </button>
-      <button
+      <AppButton variant="outline" @click="formOpen = false">取消</AppButton>
+      <AppButton
         type="submit"
         form="user-form"
-        :disabled="saving"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        :loading="saving"
+        :disabled="departmentsLoading || !!departmentsError"
+        >保存</AppButton
       >
-        {{ saving ? '保存中...' : '保存' }}
-      </button>
     </template>
   </AppDialog>
 
@@ -667,43 +981,17 @@ onMounted(() => {
     :title="`分配角色 - ${roleTarget?.username ?? ''}`"
     @close="roleDialogOpen = false"
   >
-    <div class="max-h-64 space-y-1 overflow-y-auto">
-      <label
-        v-for="role in roleOptions"
-        :key="role.id"
-        class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
-      >
-        <input
-          type="checkbox"
-          :checked="selectedRoleIds.includes(role.id)"
-          @change="toggleRole(role.id)"
-        />
-        <span class="font-medium">{{ role.name }}</span>
-        <span class="font-mono text-xs text-muted-foreground">{{ role.code }}</span>
-      </label>
-      <p v-if="roleOptions.length === 0" class="px-2 py-3 text-sm text-muted-foreground">
-        暂无可用角色
-      </p>
-    </div>
-    <p v-if="roleError" class="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <RolePicker v-model="selectedRoleIds" :roles="roleOptions" />
+    <p
+      v-if="roleError"
+      class="mt-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-[12px] leading-5 text-destructive"
+      role="alert"
+    >
       {{ roleError }}
     </p>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="roleDialogOpen = false"
-      >
-        取消
-      </button>
-      <button
-        type="button"
-        :disabled="roleSaving"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        @click="saveRoles"
-      >
-        {{ roleSaving ? '保存中...' : '保存' }}
-      </button>
+      <AppButton variant="outline" @click="roleDialogOpen = false">取消</AppButton>
+      <AppButton :loading="roleSaving" @click="saveRoles">保存</AppButton>
     </template>
   </AppDialog>
 
@@ -712,69 +1000,196 @@ onMounted(() => {
     :title="`重置密码 - ${passwordTarget?.username ?? ''}`"
     @close="passwordDialogOpen = false"
   >
-    <div class="space-y-2">
-      <label class="text-sm font-medium" for="user-new-password">新密码</label>
-      <input
-        id="user-new-password"
-        v-model="newPassword"
-        type="password"
-        autocomplete="new-password"
-        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-      />
-      <p class="text-xs text-muted-foreground">
-        重置后该用户全部会话失效，下次登录必须修改密码。
+    <form id="user-password-form" class="space-y-4" @submit="savePassword">
+      <AppField
+        label="新密码"
+        for="user-new-password"
+        :error="passwordErrors.newPassword"
+        error-id="user-new-password-error"
+        required
+        hint="重置后该用户全部会话失效，下次登录必须修改密码。"
+      >
+        <AppInput
+          id="user-new-password"
+          v-model="newPassword"
+          v-bind="newPasswordAttrs"
+          type="password"
+          autocomplete="new-password"
+          :invalid="!!passwordErrors.newPassword"
+          :aria-describedby="passwordErrors.newPassword ? 'user-new-password-error' : undefined"
+        />
+      </AppField>
+
+      <p
+        v-if="passwordError"
+        class="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-[12px] leading-5 text-destructive"
+        role="alert"
+      >
+        {{ passwordError }}
+      </p>
+    </form>
+
+    <template #footer>
+      <AppButton variant="outline" @click="passwordDialogOpen = false">取消</AppButton>
+      <AppButton type="submit" form="user-password-form" :loading="passwordSaving">
+        重置密码
+      </AppButton>
+    </template>
+  </AppDialog>
+  <AppDialog
+    :open="!!deleteTarget"
+    title="删除用户"
+    size="confirm"
+    initial-focus-id="user-delete-cancel"
+    @close="closeDelete"
+  >
+    <div class="flex items-start gap-3.5">
+      <span
+        class="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive"
+      >
+        <TriangleAlert :size="18" :stroke-width="1.8" aria-hidden="true" />
+      </span>
+      <p class="min-w-0 break-words pt-0.5 text-[13.5px] leading-[1.6] text-ink-muted">
+        确认删除用户「{{ deleteTarget?.nickname || deleteTarget?.username }}」（@{{
+          deleteTarget?.username
+        }}）吗？账号及角色关联将被移除，全部登录会话立即失效，此操作不可恢复。
       </p>
     </div>
     <p
-      v-if="passwordError"
-      class="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+      v-if="deleteError"
+      class="mt-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-[12px] leading-5 text-destructive"
+      role="alert"
     >
-      {{ passwordError }}
+      {{ deleteError }}
     </p>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="passwordDialogOpen = false"
+      <AppButton id="user-delete-cancel" variant="ghost" :disabled="deleting" @click="closeDelete"
+        >取消</AppButton
       >
-        取消
-      </button>
-      <button
-        type="button"
-        :disabled="passwordSaving"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        @click="savePassword"
+      <AppButton
+        variant="danger"
+        :press-animation="false"
+        class="transition-none! bg-[#ff5a50]! shadow-[0_1px_2px_rgba(150,40,34,0.26),0_8px_18px_rgba(255,90,80,0.24)] hover:bg-[#f14c42]! active:bg-[#dc4038]! focus-visible:ring-destructive/30!"
+        :disabled="deleting"
+        :aria-busy="deleting"
+        @click="confirmDelete"
+        >{{ deleting ? '删除中…' : '删除' }}</AppButton
       >
-        {{ passwordSaving ? '提交中...' : '重置密码' }}
-      </button>
     </template>
   </AppDialog>
-
-  <AppDialog
-    :open="!!logoutTarget"
-    :title="`强制下线 - ${logoutTarget?.username ?? ''}`"
-    @close="logoutTarget = null"
-  >
-    <p class="text-sm text-muted-foreground">选择要下线的设备，操作立即生效。</p>
-    <div class="mt-4 grid grid-cols-2 gap-2">
-      <button
-        type="button"
-        class="inline-flex h-9 items-center justify-center rounded-md bg-destructive px-3 text-sm text-white hover:bg-destructive/90 disabled:opacity-50"
-        :disabled="loggingOut"
-        @click="doForceLogout()"
-      >
-        全部设备
-      </button>
-      <button
-        v-for="device in ['WEB', 'APP', 'MINI']"
-        :key="device"
-        type="button"
-        class="inline-flex h-9 items-center justify-center rounded-md border border-input px-3 text-sm hover:bg-accent disabled:opacity-50"
-        :disabled="loggingOut"
-        @click="doForceLogout(device)"
-      >
-        {{ device }}
-      </button>
-    </div>
-  </AppDialog>
 </template>
+
+<style scoped>
+.user-page-header,
+.user-management {
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.user-page-header :deep(h1) {
+  font-weight: 740;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.user-page-header :deep(p) {
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.user-list-panel :deep(.section-label) {
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.user-list-panel :deep(.section-label::before) {
+  width: 7px;
+  height: 7px;
+  box-shadow: 0 0 0 5px var(--success-soft);
+}
+
+.user-list-tool {
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+  box-shadow: var(--inset-edge);
+}
+
+.user-list-tool:hover {
+  background: var(--hover-surface);
+  color: var(--ink);
+}
+
+.user-list-panel :deep(thead th) {
+  font-weight: 620;
+}
+
+.user-departments {
+  padding: 16px 18px 20px;
+}
+
+.user-departments :deep(nav > div) {
+  padding-top: 4px;
+}
+
+.user-list-panel :deep(header) {
+  min-height: 60px;
+  padding: 14px 20px;
+}
+
+.user-list-panel :deep(footer) {
+  padding: 12px 20px;
+}
+
+.user-list-panel :deep(tbody td) {
+  height: 48px;
+  padding-block: 6px;
+}
+
+.user-list-panel :deep(th:nth-child(5)),
+.user-list-panel :deep(td:nth-child(5)) {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.user-list-panel :deep(th:last-child),
+.user-list-panel :deep(td:last-child) {
+  border-left: 1px solid var(--line-soft);
+}
+
+.user-status {
+  gap: 6px;
+  border: 0;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.user-status-enabled {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.user-status-enabled :deep(> span) {
+  background: var(--brand-bright);
+  box-shadow: 0 0 0 3px var(--success-soft);
+}
+
+.user-actions :deep(button) {
+  color: var(--ink-soft);
+}
+
+.user-actions :deep(button:hover) {
+  color: var(--ink);
+}
+
+.user-actions :deep(svg) {
+  stroke-width: 1.5;
+}
+</style>

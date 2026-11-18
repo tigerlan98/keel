@@ -1,8 +1,33 @@
 <script setup lang="ts">
+import {
+  Ban,
+  ChevronRight,
+  ChevronsDown,
+  ChevronsUp,
+  CircleCheck,
+  Pencil,
+  RefreshCw,
+  Search,
+} from '@lucide/vue'
+import AppButton from '@/components/app/AppButton.vue'
+import AppDataTable from '@/components/app/AppDataTable.vue'
+import AppErrorState from '@/components/app/AppErrorState.vue'
+import AppField from '@/components/app/AppField.vue'
+import AppFilterBar from '@/components/app/AppFilterBar.vue'
+import AppInput from '@/components/app/AppInput.vue'
+import AppSelect from '@/components/app/AppSelect.vue'
+import AppPanel from '@/components/app/AppPanel.vue'
+import AppStatusTag from '@/components/app/AppStatusTag.vue'
+import { menuIcon } from '@/lib/menus'
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import { ApiError } from '@/api/http'
-import { fetchResource, fetchResourceTree, updateResource, updateResourceStatus } from '@/api/resources'
+import {
+  fetchResource,
+  fetchResourceTree,
+  updateResource,
+  updateResourceStatus,
+} from '@/api/resources'
 import type { ResourceNode, ResourceStatus, ResourceType } from '@/api/types'
 import AppDialog from '@/components/app/AppDialog.vue'
 import PageHeader from '@/components/app/PageHeader.vue'
@@ -16,6 +41,45 @@ interface FlatResource {
 const toast = useToastStore()
 
 const nodes = ref<ResourceNode[]>([])
+const keyword = ref('')
+const collapsedIds = ref(new Set<number>())
+const columns = [
+  { key: 'name', label: '菜单名称' },
+  { key: 'type', label: '类型' },
+  { key: 'code', label: '权限标识' },
+  { key: 'path', label: '路由' },
+  { key: 'sort', label: '排序' },
+  { key: 'visible', label: '显示' },
+  { key: 'status', label: '状态' },
+  { key: 'actions', label: '操作', align: 'right' as const, sticky: true },
+]
+function matches(node: ResourceNode): boolean {
+  const query = keyword.value.trim().toLocaleLowerCase()
+  return (
+    !query ||
+    `${node.name} ${node.code}`.toLocaleLowerCase().includes(query) ||
+    (node.children ?? []).some(matches)
+  )
+}
+const treeRows = computed(() => {
+  const rows: (ResourceNode & { depth: number })[] = []
+  function visit(list: ResourceNode[], depth: number): void {
+    for (const node of list) {
+      if (!matches(node)) continue
+      rows.push({ ...node, depth })
+      if (keyword.value.trim() || !collapsedIds.value.has(node.id))
+        visit(node.children ?? [], depth + 1)
+    }
+  }
+  visit(nodes.value, 0)
+  return rows
+})
+function toggleBranch(id: number): void {
+  const next = new Set(collapsedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  collapsedIds.value = next
+}
 const loading = ref(false)
 const error = ref('')
 const flatResources = computed(() => flatten(nodes.value))
@@ -42,10 +106,20 @@ const parentOptions = computed(() => {
   }
   return flatResources.value.filter(
     (item) =>
-      (item.node.type === 'DIRECTORY' || item.node.type === 'MENU') &&
-      !excluded.has(item.node.id),
+      (item.node.type === 'DIRECTORY' || item.node.type === 'MENU') && !excluded.has(item.node.id),
   )
 })
+
+const parentSelectOptions = computed(() => [
+  ...(editingType.value === 'DIRECTORY' || editingType.value === 'MENU'
+    ? [{ label: '根节点', value: 0 }]
+    : []),
+  ...parentOptions.value.map((option) => ({
+    label: option.node.name + '（' + option.node.code + '）',
+    value: option.node.id,
+    depth: option.depth,
+  })),
+])
 
 async function load() {
   loading.value = true
@@ -175,74 +249,142 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageHeader
-    title="资源管理"
-    description="资源由 Flyway 迁移维护；后台只更新展示属性与启停状态。"
-  />
-
-  <div class="mt-6 rounded-xl border bg-card">
-    <div
-      v-if="error"
-      class="flex items-center justify-between gap-3 border-b bg-destructive/5 px-4 py-3 text-sm text-destructive"
-    >
-      <span>{{ error }}</span>
-      <button type="button" class="shrink-0 underline-offset-4 hover:underline" @click="load">
-        重试
-      </button>
-    </div>
-
-    <div v-if="loading" class="px-4 py-10 text-center text-sm text-muted-foreground">加载中...</div>
-    <div v-else-if="flatResources.length === 0" class="px-4 py-10 text-center text-sm text-muted-foreground">
-      暂无数据
-    </div>
-    <div v-else class="divide-y">
-      <div
-        v-for="item in flatResources"
-        :key="item.node.id"
-        class="flex flex-wrap items-center gap-3 px-4 py-3 text-sm hover:bg-muted/40"
-        :style="{ paddingLeft: `${item.depth * 20 + 16}px` }"
+  <PageHeader title="菜单管理" description="管理目录、菜单与按钮，配置展示顺序、图标和启停状态。" />
+  <div class="mt-5 space-y-4">
+    <AppFilterBar @submit="keyword = keyword.trim()">
+      <AppField label="关键字" for="menu-keyword" class="w-[240px]"
+        ><AppInput
+          id="menu-keyword"
+          v-model="keyword"
+          placeholder="菜单名称 / 权限标识"
+          maxlength="64"
+      /></AppField>
+      <template #actions
+        ><AppButton type="submit" :icon="Search">查询</AppButton
+        ><AppButton variant="outline" :icon="RefreshCw" @click="keyword = ''"
+          >重置</AppButton
+        ></template
       >
-        <span class="rounded px-2 py-0.5 text-xs font-medium" :class="typeClass(item.node.type)">
-          {{ typeLabel(item.node.type) }}
-        </span>
-        <span class="font-medium">{{ item.node.name }}</span>
-        <span class="font-mono text-xs text-muted-foreground">{{ item.node.code }}</span>
-        <span v-if="item.node.path" class="text-xs text-muted-foreground">{{ item.node.path }}</span>
-        <span
-          class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-          :class="
-            item.node.status === 'ENABLED'
-              ? 'bg-emerald-50 text-emerald-700'
-              : 'bg-destructive/10 text-destructive'
+    </AppFilterBar>
+    <AppPanel>
+      <template #header
+        ><div class="flex items-center gap-2.5">
+          <span class="section-label">菜单列表</span
+          ><span class="text-[11.5px] text-ink-soft">共 {{ flatResources.length }} 项</span>
+        </div></template
+      >
+      <template #tools>
+        <AppButton
+          variant="outline"
+          size="icon-sm"
+          aria-label="全部展开"
+          title="全部展开"
+          @click="collapsedIds = new Set()"
+          ><ChevronsDown :size="14"
+        /></AppButton>
+        <AppButton
+          variant="outline"
+          size="icon-sm"
+          aria-label="全部收起"
+          title="全部收起"
+          @click="
+            collapsedIds = new Set(
+              flatResources
+                .filter((item) => item.node.children?.length)
+                .map((item) => item.node.id),
+            )
           "
+          ><ChevronsUp :size="14"
+        /></AppButton>
+        <AppButton
+          variant="outline"
+          size="icon-sm"
+          :loading="loading"
+          aria-label="刷新"
+          title="刷新"
+          @click="load"
+          ><RefreshCw :size="14"
+        /></AppButton>
+      </template>
+      <AppErrorState v-if="error" :message="error" @retry="load" />
+      <AppDataTable
+        v-else
+        :columns="columns"
+        :rows="treeRows"
+        :animation-key="nodes.map((node) => node.id).join(',')"
+        :loading="loading"
+        :min-width="1040"
+        empty-title="暂无菜单"
+        empty-description="请调整查询条件。"
+      >
+        <template #cell-name="{ row }"
+          ><div class="flex items-center gap-2" :style="{ paddingLeft: `${row.depth * 20}px` }">
+            <button
+              v-if="row.children?.length"
+              type="button"
+              class="grid h-6 w-6 shrink-0 place-items-center rounded-md text-ink-soft transition-colors hover:bg-ink/5 focus-visible:ring-2 focus-visible:ring-brand/30"
+              :aria-label="`${collapsedIds.has(row.id) ? '展开' : '收起'}${row.name}`"
+              :aria-expanded="!!keyword || !collapsedIds.has(row.id)"
+              @click="toggleBranch(row.id)"
+            >
+              <ChevronRight
+                :size="14"
+                class="transition-transform duration-200"
+                :class="(!collapsedIds.has(row.id) || !!keyword) && 'rotate-90'"
+              /></button
+            ><span v-else class="w-6 shrink-0"></span>
+            <component :is="menuIcon(row.icon)" :size="16" class="shrink-0 text-ink-soft" /><span
+              class="font-semibold text-ink"
+              >{{ row.name }}</span
+            >
+          </div></template
         >
-          {{ item.node.status === 'ENABLED' ? '启用' : '禁用' }}
-        </span>
-        <span v-if="!item.node.visible" class="text-xs text-muted-foreground">隐藏</span>
-        <span class="ml-auto text-xs text-muted-foreground">排序 {{ item.node.sort }}</span>
-        <div class="flex gap-3">
-          <button
-            v-permission="'iam:resource:update'"
-            type="button"
-            class="text-primary hover:underline"
-            @click="openEdit(item.node)"
-          >
-            编辑
-          </button>
-          <button
-            v-permission="'iam:resource:status'"
-            type="button"
-            class="hover:underline"
-            :class="item.node.status === 'ENABLED' ? 'text-destructive' : 'text-primary'"
-            @click="toggleStatus(item.node)"
-          >
-            {{ item.node.status === 'ENABLED' ? '禁用' : '启用' }}
-          </button>
-        </div>
-      </div>
-    </div>
+        <template #cell-type="{ row }"
+          ><span
+            class="rounded-md px-2 py-1 text-[11px] font-medium"
+            :class="typeClass(row.type)"
+            >{{ typeLabel(row.type) }}</span
+          ></template
+        >
+        <template #cell-code="{ row }"
+          ><span class="code-chip">{{ row.code }}</span></template
+        >
+        <template #cell-path="{ row }"
+          ><span class="text-[12px] text-ink-muted">{{ row.path || '—' }}</span></template
+        >
+        <template #cell-visible="{ row }"
+          ><span class="text-[12px] text-ink-soft">{{
+            row.visible ? '显示' : '隐藏'
+          }}</span></template
+        >
+        <template #cell-status="{ row }"
+          ><AppStatusTag
+            :tone="row.status === 'ENABLED' ? 'success' : 'danger'"
+            :label="row.status === 'ENABLED' ? '启用' : '禁用'"
+        /></template>
+        <template #cell-actions="{ row }"
+          ><div class="flex justify-end gap-0.5">
+            <AppButton
+              v-permission="'iam:resource:update'"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="编辑"
+              title="编辑"
+              @click="openEdit(row)"
+              ><Pencil :size="14" /></AppButton
+            ><AppButton
+              v-permission="'iam:resource:status'"
+              :variant="row.status === 'ENABLED' ? 'danger-ghost' : 'ghost'"
+              size="icon-sm"
+              :aria-label="row.status === 'ENABLED' ? '禁用' : '启用'"
+              :title="row.status === 'ENABLED' ? '禁用' : '启用'"
+              @click="toggleStatus(row)"
+              ><Ban v-if="row.status === 'ENABLED'" :size="14" /><CircleCheck v-else :size="14"
+            /></AppButton></div
+        ></template>
+      </AppDataTable>
+    </AppPanel>
   </div>
-
   <AppDialog :open="dialogOpen" title="编辑资源" @close="dialogOpen = false">
     <form id="resource-form" class="space-y-4" @submit.prevent="save">
       <div class="space-y-1">
@@ -258,18 +400,7 @@ onMounted(() => {
 
       <div class="space-y-1">
         <label class="text-sm font-medium" for="resource-parent">父级</label>
-        <select
-          id="resource-parent"
-          v-model.number="form.parentId"
-          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring"
-        >
-          <option v-if="editingType === 'DIRECTORY' || editingType === 'MENU'" :value="0">
-            根节点
-          </option>
-          <option v-for="option in parentOptions" :key="option.node.id" :value="option.node.id">
-            {{ '  '.repeat(option.depth) }}{{ option.node.name }}（{{ option.node.code }}）
-          </option>
-        </select>
+        <AppSelect id="resource-parent" v-model="form.parentId" :options="parentSelectOptions" />
       </div>
 
       <div class="grid grid-cols-2 gap-4">
@@ -310,21 +441,10 @@ onMounted(() => {
       </p>
     </form>
     <template #footer>
-      <button
-        type="button"
-        class="inline-flex h-9 items-center rounded-md border border-input px-4 text-sm hover:bg-accent"
-        @click="dialogOpen = false"
-      >
-        取消
-      </button>
-      <button
-        type="submit"
-        form="resource-form"
-        :disabled="saving"
-        class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
+      <AppButton type="button" variant="outline" @click="dialogOpen = false"> 取消 </AppButton>
+      <AppButton type="submit" form="resource-form" :disabled="saving" variant="primary">
         {{ saving ? '保存中...' : '保存' }}
-      </button>
+      </AppButton>
     </template>
   </AppDialog>
 </template>

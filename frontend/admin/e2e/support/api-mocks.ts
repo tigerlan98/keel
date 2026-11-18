@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import type { MenuNode } from '../../src/api/types'
 
 export const session = {
   user: { id: 1, username: 'admin', nickname: '超级管理员' },
@@ -31,8 +32,18 @@ export function unauthorized() {
 /** 已登录：/auth/me 返回有效会话；可通过 overrides 覆盖权限、菜单等字段。 */
 export async function mockSession(
   page: Page,
-  overrides: Partial<typeof session> = {},
+  overrides: Partial<Omit<typeof session, 'menus'>> & { menus?: MenuNode[] } = {},
 ): Promise<void> {
+  await page.route('**/api/v1/admin/audit/**', (route) =>
+    route.fulfill(ok({ items: [], total: 0, page: 1, size: 100 })),
+  )
+  await page.route('**/api/v1/admin/iam/departments/options', (route) =>
+    route.fulfill(
+      ok([
+        { id: 1, parentId: 0, name: '总公司', status: 'ENABLED', selectable: true, children: [] },
+      ]),
+    ),
+  )
   await page.route('**/api/v1/admin/auth/me', (route) =>
     route.fulfill(ok({ ...session, ...overrides })),
   )
@@ -45,5 +56,7 @@ export async function mockUnauthenticated(page: Page): Promise<void> {
 
 /** 登录与写请求前的 CSRF token。 */
 export async function mockCsrf(page: Page): Promise<void> {
-  await page.route('**/api/v1/admin/auth/csrf', (route) => route.fulfill(ok({ token: 'csrf-token' })))
+  await page.route('**/api/v1/admin/auth/csrf', (route) =>
+    route.fulfill(ok({ token: 'csrf-token' })),
+  )
 }
